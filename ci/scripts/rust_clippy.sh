@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,55 +17,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-apache-rat-*.jar
-
-# Linux perf sample data
-perf.data
-perf.data.old
-
-
-.vscode
-.idea/
-.pytest_cache/
-pkgs
-docker_cache
-.gdb_history
-*.orig
-.*.swp
-.*.swo
-
-venv/*
-
-# macOS
-.DS_Store
-
-# docker volumes used for caching
-.docker
-
-# Rust
-target
-Cargo.lock
-!datafusion-cli/Cargo.lock
-
-rusty-tags.vi
-.history
-.flatbuffers/
-
-# apache release artifacts
-dev/dist
-
-# CI
-arrow-ballista
-
-datafusion/CHANGELOG.md.bak
-.githubchangeloggenerator.cache*
-
-# Generated tpch data
-datafusion/sqllogictests/test_files/tpch/data/*
-
-# Scratch temp dir for sqllogictests
-datafusion/sqllogictest/test_files/scratch*
-
-# rat
-filtered_rat.txt
-rat.txt
+set -ex
+cargo clippy --all-targets --all-features -- -D warnings
