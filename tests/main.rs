@@ -15,48 +15,103 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::datatypes::{DataType, TimeUnit};
-use utils::{display_val, run_query};
+use crate::utils::TestExecution;
 
 mod utils;
 
-#[tokio::test]
-async fn test_mode_utf8() {
-    let sql = "SELECT MODE(utf8_col) FROM test_table";
-    let batches = run_query(sql).await.unwrap();
-    assert_eq!(display_val(batches).await, (DataType::Utf8, "apple".to_string()));
-}
+static TEST_TABLE: &str = r#"
+CREATE TABLE test_table (
+    utf8_col VARCHAR,
+    int64_col BIGINT,
+    float64_col DOUBLE,
+    date64_col DATE,
+    time64_col TIME
+) AS VALUES
+    ('apple', 1, 1.0, DATE '2021-01-01', TIME '01:00:00'),
+    ('banana', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('apple', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('orange', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('banana', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('apple', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    (NULL, NULL, NULL, NULL, NULL);
+"#;
 
 #[tokio::test]
+async fn test_mode_utf8() {
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution.run_and_format("SELECT MODE(utf8_col) FROM test_table").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +---------------------------+
+          - "| mode(test_table.utf8_col) |"
+          - +---------------------------+
+          - "| apple                     |"
+          - +---------------------------+
+    "###);
+}
+#[tokio::test]
 async fn test_mode_int64() {
-    let sql = "SELECT MODE(int64_col) FROM test_table";
-    let batches = run_query(sql).await.unwrap();
-    assert_eq!(display_val(batches).await, (DataType::Int64, "3".to_string()));
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution.run_and_format("SELECT MODE(int64_col) FROM test_table").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +----------------------------+
+          - "| mode(test_table.int64_col) |"
+          - +----------------------------+
+          - "| 3                          |"
+          - +----------------------------+
+    "###);
 }
 
 #[tokio::test]
 async fn test_mode_float64() {
-    let sql = "SELECT MODE(float64_col) FROM test_table";
-    let batches = run_query(sql).await.unwrap();
-    assert_eq!(display_val(batches).await, (DataType::Float64, "3.0".to_string()));
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution
+        .run_and_format("SELECT MODE(float64_col) FROM test_table")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +------------------------------+
+          - "| mode(test_table.float64_col) |"
+          - +------------------------------+
+          - "| 3.0                          |"
+          - +------------------------------+
+    "###);
 }
 
 #[tokio::test]
 async fn test_mode_date64() {
-    let sql = "SELECT MODE(date64_col) FROM test_table";
-    let batches = run_query(sql).await.unwrap();
-    assert_eq!(
-        display_val(batches).await,
-        (DataType::Date64, "2021-01-03T00:00:00".to_string())
-    );
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution
+        .run_and_format("SELECT MODE(date64_col) FROM test_table")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +-----------------------------+
+          - "| mode(test_table.date64_col) |"
+          - +-----------------------------+
+          - "| 2021-01-03                  |"
+          - +-----------------------------+
+    "###);
 }
 
 #[tokio::test]
 async fn test_mode_time64() {
-    let sql = "SELECT MODE(time64_col) FROM test_table";
-    let batches = run_query(sql).await.unwrap();
-    assert_eq!(
-        display_val(batches).await,
-        (DataType::Time64(TimeUnit::Microsecond), "03:00:00".to_string())
-    );
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution
+        .run_and_format("SELECT MODE(time64_col) FROM test_table")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +-----------------------------+
+          - "| mode(test_table.time64_col) |"
+          - +-----------------------------+
+          - "| 03:00:00                    |"
+          - +-----------------------------+
+    "###);
 }

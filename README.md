@@ -1,7 +1,7 @@
 # datafusion-functions-extra
 
-<!-- [![CI](https://github.com/datafusion-contrib/datafusion-functions-json/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-functions-json/actions/workflows/ci.yml?query=branch%3Amain) -->
-<!-- [![Crates.io](https://img.shields.io/crates/v/datafusion-functions-json?color=green)](https://crates.io/crates/datafusion-functions-json) -->
+[![CI](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml?query=branch%3Amain)
+<!-- [![Crates.io](https://img.shields.io/crates/v/datafusion-functions-extra?color=green)](https://crates.io/crates/datafusion-functions-extra) -->
 
 **Note:** This is not an official Apache Software Foundation release.
 
