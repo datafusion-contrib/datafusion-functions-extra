@@ -15,20 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::any::Any;
-use std::fmt::Debug;
 use arrow::array::{ArrayRef, Float64Array, UInt64Array};
 use arrow::datatypes::{DataType, Field};
 use datafusion::arrow;
+use std::any::Any;
+use std::fmt::Debug;
 
 use datafusion::common::cast::as_float64_array;
 use datafusion::common::downcast_value;
-use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
-use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
-use datafusion::scalar::ScalarValue;
-use datafusion::error::Result;
 use datafusion::common::DataFusionError;
-
+use datafusion::error::Result;
+use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
+use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
+use datafusion::scalar::ScalarValue;
 
 make_udaf_expr_and_func!(
     KurtosisFunction,
@@ -59,10 +58,7 @@ impl Default for KurtosisFunction {
 impl KurtosisFunction {
     pub fn new() -> Self {
         Self {
-            signature: Signature::coercible(
-                vec![DataType::Float64],
-                Volatility::Immutable,
-            ),
+            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
         }
     }
 }
@@ -166,8 +162,8 @@ impl Accumulator for KurtosisAccumulator {
         let count_64 = 1_f64 / self.count as f64;
         let m4 = count_64
             * (self.sum_four - 4.0 * self.sum_cub * self.sum * count_64
-            + 6.0 * self.sum_sqr * self.sum.powi(2) * count_64.powi(2)
-            - 3.0 * self.sum.powi(4) * count_64.powi(3));
+                + 6.0 * self.sum_sqr * self.sum.powi(2) * count_64.powi(2)
+                - 3.0 * self.sum.powi(4) * count_64.powi(3));
 
         let m2 = (self.sum_sqr - self.sum.powi(2) * count_64) * count_64;
         if m2 <= 0.0 {

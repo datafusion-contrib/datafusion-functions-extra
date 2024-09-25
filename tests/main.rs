@@ -133,7 +133,8 @@ async fn test_kurtosis() {
           - +-------------------+
     "###);
 
-    let actual = execution.run_and_format("SELECT kurtosis(col) FROM VALUES ('1'), ('10'), ('100'), ('10'), ('1') as tab(col);")
+    let actual = execution
+        .run_and_format("SELECT kurtosis(col) FROM VALUES ('1'), ('10'), ('100'), ('10'), ('1') as tab(col);")
         .await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
@@ -144,7 +145,8 @@ async fn test_kurtosis() {
           - +-------------------+
     "###);
 
-    let actual = execution.run_and_format("SELECT kurtosis(col) FROM VALUES (1.0), (2.0), (3.0) as tab(col);")
+    let actual = execution
+        .run_and_format("SELECT kurtosis(col) FROM VALUES (1.0), (2.0), (3.0) as tab(col);")
         .await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
@@ -155,8 +157,7 @@ async fn test_kurtosis() {
           - +-------------------+
     "###);
 
-    let actual = execution.run_and_format("SELECT kurtosis(1);")
-        .await;
+    let actual = execution.run_and_format("SELECT kurtosis(1);").await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
           - +--------------------+
@@ -166,8 +167,7 @@ async fn test_kurtosis() {
           - +--------------------+
     "###);
 
-    let actual = execution.run_and_format("SELECT kurtosis(1.0);")
-        .await;
+    let actual = execution.run_and_format("SELECT kurtosis(1.0);").await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
           - +----------------------+
@@ -177,8 +177,7 @@ async fn test_kurtosis() {
           - +----------------------+
     "###);
 
-    let actual = execution.run_and_format("SELECT kurtosis(null);")
-        .await;
+    let actual = execution.run_and_format("SELECT kurtosis(null);").await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
           - +----------------+
