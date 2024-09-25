@@ -27,13 +27,17 @@ use datafusion::logical_expr::AggregateUDF;
 pub mod macros;
 pub mod common;
 pub mod mode;
+pub mod kurtosis;
 
 pub mod expr_extra_fn {
     pub use super::mode::mode;
 }
 
 pub fn all_extra_aggregate_functions() -> Vec<Arc<AggregateUDF>> {
-    vec![mode_udaf()]
+    vec![
+        mode_udaf(),
+        kurtosis::kurtosis_udaf(),
+    ]
 }
 
 /// Registers all enabled packages with a [`FunctionRegistry`]
