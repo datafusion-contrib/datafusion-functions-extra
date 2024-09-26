@@ -115,3 +115,138 @@ async fn test_mode_time64() {
           - +-----------------------------+
     "###);
 }
+
+#[tokio::test]
+async fn test_max_by_and_min_by() {
+    let mut execution = TestExecution::new().await.unwrap();
+
+    // Test max_by with numbers
+    let actual = execution
+        .run_and_format("SELECT max_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| max_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 3                   |"
+    - +---------------------+
+    "###);
+
+    // Test min_by with numbers
+    let actual = execution
+        .run_and_format("SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| min_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 2                   |"
+    - +---------------------+
+    "###);
+
+    // Test max_by with strings
+    let actual = execution
+        .run_and_format("SELECT max_by(name, length(name)) FROM VALUES ('Alice'), ('Bob'), ('Charlie') as tab(name);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------------------------------+
+    - "| max_by(tab.name,character_length(tab.name)) |"
+    - +---------------------------------------------+
+    - "| Charlie                                     |"
+    - +---------------------------------------------+
+    "###);
+
+    // Test min_by with strings
+    let actual = execution
+        .run_and_format("SELECT min_by(name, length(name)) FROM VALUES ('Alice'), ('Bob'), ('Charlie') as tab(name);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------------------------------+
+    - "| min_by(tab.name,character_length(tab.name)) |"
+    - +---------------------------------------------+
+    - "| Bob                                         |"
+    - +---------------------------------------------+
+    "###);
+
+    // Test max_by with null values
+    let actual = execution
+        .run_and_format("SELECT max_by(x, y) FROM VALUES (1, 10), (2, null), (3, 15), (null, 8) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| max_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 2                   |"
+    - +---------------------+
+    "###);
+
+    // Test min_by with null values
+    let actual = execution
+        .run_and_format("SELECT min_by(x, y) FROM VALUES (1, 10), (2, null), (3, 15), (null, 8) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| min_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 2                   |"
+    - +---------------------+
+    "###);
+
+    // Test max_by with a single value
+    let actual = execution
+        .run_and_format("SELECT max_by(x, y) FROM VALUES (1, 10) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| max_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 1                   |"
+    - +---------------------+
+    "###);
+
+    // Test min_by with a single value
+    let actual = execution
+        .run_and_format("SELECT min_by(x, y) FROM VALUES (1, 10) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| min_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "| 1                   |"
+    - +---------------------+
+    "###);
+
+    // Test max_by with an empty set
+    let actual = execution
+        .run_and_format("SELECT max_by(x, y) FROM (SELECT * FROM (VALUES (1, 10)) WHERE 1=0) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| max_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "|                     |"
+    - +---------------------+
+    "###);
+
+    // Test min_by with an empty set
+    let actual = execution
+        .run_and_format("SELECT min_by(x, y) FROM (SELECT * FROM (VALUES (1, 10)) WHERE 1=0) as tab(x, y);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +---------------------+
+    - "| min_by(tab.x,tab.y) |"
+    - +---------------------+
+    - "|                     |"
+    - +---------------------+
+    "###);
+}

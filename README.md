@@ -1,6 +1,7 @@
 # datafusion-functions-extra
 
 [![CI](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml?query=branch%3Amain)
+
 <!-- [![Crates.io](https://img.shields.io/crates/v/datafusion-functions-extra?color=green)](https://crates.io/crates/datafusion-functions-extra) -->
 
 **Note:** This is not an official Apache Software Foundation release.
@@ -57,8 +58,29 @@ SELECT mode(time64_col) as mode_time FROM test_table;
 -- +-----------+
 -- | 03:00:00  |
 -- +-----------+
+
+-- Get the x value associated with the maximum y value
+SELECT max_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
+-- Results in
+-- +---------------------+
+-- | max_by(tab.x,tab.y) |
+-- +---------------------+
+-- | 3                   |
+-- +---------------------+
+
+-- Get the x value associated with the minimum y value
+SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
+-- Results in
+-- +---------------------+
+-- | min_by(tab.x,tab.y) |
+-- +---------------------+
+-- | 2                   |
+-- +---------------------+
+
 ```
 
 ## Done
 
-* [x] `mode(expression) -> scalar` - Returns the most frequent (mode) value from a column of data.
+- [x] `mode(expression) -> scalar` - Returns the most frequent (mode) value from a column of data.
+- [x] `max_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the maximum value of `expression2`.
+- [x] `min_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the minimum value of `expression2`.
