@@ -29,6 +29,8 @@ pub mod common;
 pub mod max_min_by;
 pub mod mode;
 pub mod expr_extra_fn {
+    pub use super::max_min_by::max_by;
+    pub use super::max_min_by::min_by;
     pub use super::mode::mode;
 }
 
