@@ -26,17 +26,24 @@ use datafusion::logical_expr::AggregateUDF;
 #[macro_use]
 pub mod macros;
 pub mod common;
+pub mod kurtosis;
 pub mod max_min_by;
 pub mod mode;
 
 pub mod expr_extra_fn {
+    pub use super::kurtosis::kurtosis;
     pub use super::max_min_by::max_by;
     pub use super::max_min_by::min_by;
     pub use super::mode::mode;
 }
 
 pub fn all_extra_aggregate_functions() -> Vec<Arc<AggregateUDF>> {
-    vec![mode_udaf(), max_min_by::max_by_udaf(), max_min_by::min_by_udaf(), kurtosis::kurtosis_udaf()]
+    vec![
+        mode_udaf(),
+        max_min_by::max_by_udaf(),
+        max_min_by::min_by_udaf(),
+        kurtosis::kurtosis_udaf(),
+    ]
 }
 
 /// Registers all enabled packages with a [`FunctionRegistry`]
