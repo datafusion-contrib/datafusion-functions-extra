@@ -42,7 +42,7 @@ impl SkewnessFunc {
     pub fn new() -> Self {
         Self {
             name: "skewness".to_string(),
-            signature: Signature::user_defined(Volatility::Immutable),
+            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
         }
     }
 }
@@ -74,10 +74,6 @@ impl AggregateUDFImpl for SkewnessFunc {
             Field::new("sum_sqr", DataType::Float64, true),
             Field::new("sum_cub", DataType::Float64, true),
         ])
-    }
-
-    fn coerce_types(&self, _arg_types: &[DataType]) -> datafusion::common::Result<Vec<DataType>> {
-        Ok(vec![DataType::Float64])
     }
 }
 

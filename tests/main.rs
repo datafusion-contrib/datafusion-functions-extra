@@ -252,9 +252,10 @@ async fn test_max_by_and_min_by() {
 }
 
 #[tokio::test]
-async fn test_skewness_int64() {
+async fn test_skewness() {
     let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
+    // Test with int64
     let actual = execution
         .run_and_format("SELECT skewness(int64_col) FROM test_table")
         .await;
@@ -266,21 +267,40 @@ async fn test_skewness_int64() {
         - "| -0.8573214099741201            |"
         - +--------------------------------+
     "###);
-}
 
-#[tokio::test]
-async fn test_skewness_float64() {
-    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
-
+    // Test with float64
     let actual = execution
         .run_and_format("SELECT skewness(float64_col) FROM test_table")
         .await;
 
     insta::assert_yaml_snapshot!(actual, @r###"
-        - +----------------------------------+
-        - "| skewness(test_table.float64_col) |"
-        - +----------------------------------+
-        - "| -0.8573214099741201              |"
-        - +----------------------------------+
+    - +----------------------------------+
+    - "| skewness(test_table.float64_col) |"
+    - +----------------------------------+
+    - "| -0.8573214099741201              |"
+    - +----------------------------------+
+"###);
+
+    // Test with single value
+    let actual = execution.run_and_format("SELECT skewness(1.0)").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+        - +----------------------+
+        - "| skewness(Float64(1)) |"
+        - +----------------------+
+        - "|                      |"
+        - +----------------------+
+    "###);
+
+    let actual = execution
+        .run_and_format("SELECT skewness(col) FROM VALUES (1.0), (2.0) as tab(col)")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+        - +-------------------+
+        - "| skewness(tab.col) |"
+        - +-------------------+
+        - "|                   |"
+        - +-------------------+
     "###);
 }
