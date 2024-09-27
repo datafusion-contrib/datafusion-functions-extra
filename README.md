@@ -77,15 +77,6 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 -- | 2                   |
 -- +---------------------+
 
--- Get the kurtosis value of a column of numeric data.
-SELECT kurtosis(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(col);
--- Results in
-- +-------------------+
-- "| kurtosis(tab.col) |"
-- +-------------------+
-- "| 4.777292927667962 |"
-- +-------------------+
-
 ```
 
 ## Done
@@ -94,5 +85,4 @@ SELECT kurtosis(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(co
 - [x] `max_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the maximum value of `expression2`.
 - [x] `min_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the minimum value of `expression2`.
 - [x] `kurtois_pop(expression) -> scalar` - Computes the excess kurtosis (Fisher’s definition) without bias correction.
-
-- [x] `kurtosis(expression) -> scalar` - Returns the kurtosis, a measure of the `tailedness` of the distribution, for the given numeric values in `expression`.
+- [x] `kurtosis(expression) -> scalar` - Computes the excess kurtosis (Fisher’s definition) with bias correction according to the sample size.
