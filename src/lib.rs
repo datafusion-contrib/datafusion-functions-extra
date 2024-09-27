@@ -33,6 +33,7 @@ pub mod expr_extra_fn {
     pub use super::max_min_by::max_by;
     pub use super::max_min_by::min_by;
     pub use super::mode::mode;
+    pub use super::skewness::skewness;
 }
 
 pub fn all_extra_aggregate_functions() -> Vec<Arc<AggregateUDF>> {

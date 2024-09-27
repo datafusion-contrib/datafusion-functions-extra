@@ -77,14 +77,6 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 -- | 2                   |
 -- +---------------------+
 
--- Computes the skewness value
-SELECT skewness(col) FROM VALUES (-10), (-20), (100), (1000), (1000) AS tab(col);
--- Results in
--- +---------------------+
--- | skewness(tab.col)   |
--- +---------------------+
--- | 0.574511614753      |
--- +---------------------+
 ```
 
 ## Done
