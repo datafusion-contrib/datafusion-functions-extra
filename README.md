@@ -93,4 +93,6 @@ SELECT kurtosis(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(co
 - [x] `mode(expression) -> scalar` - Returns the most frequent (mode) value from a column of data.
 - [x] `max_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the maximum value of `expression2`.
 - [x] `min_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the minimum value of `expression2`.
+- [x] `kurtois_pop(expression) -> scalar` - Computes the excess kurtosis (Fisher’s definition) without bias correction.
+
 - [x] `kurtosis(expression) -> scalar` - Returns the kurtosis, a measure of the `tailedness` of the distribution, for the given numeric values in `expression`.
