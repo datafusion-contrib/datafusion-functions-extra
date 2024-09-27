@@ -22,14 +22,22 @@ use datafusion::common::ScalarValue;
 use datafusion::logical_expr::{function::AccumulatorArgs, function::StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
 use std::any::Any;
+use std::fmt::Debug;
 use std::ops::{Div, Mul, Sub};
 
 make_udaf_expr_and_func!(SkewnessFunc, skewness, x, "Computes the skewness value.", skewness_udaf);
 
-#[derive(Debug)]
 pub struct SkewnessFunc {
     name: String,
     signature: Signature,
+}
+
+impl Debug for SkewnessFunc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SkewnessFunc")
+            .field("signature", &self.signature)
+            .finish()
+    }
 }
 
 impl Default for SkewnessFunc {
