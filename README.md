@@ -77,6 +77,13 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 -- | 2                   |
 -- +---------------------+
 
+SELECT kurtosis_pop(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(col);
+-- Results in
+-- +-----------------------+
+-- | kurtosis_pop(tab.col) |
+-- +-----------------------+
+-- | 0.194323231917        |
+-- +-----------------------+
 ```
 
 ## Done
@@ -84,3 +91,4 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 - [x] `mode(expression) -> scalar` - Returns the most frequent (mode) value from a column of data.
 - [x] `max_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the maximum value of `expression2`.
 - [x] `min_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the minimum value of `expression2`.
+- [x] `kurtois_pop(expression) -> scalar` - Computes the excess kurtosis (Fisher’s definition) without bias correction.
