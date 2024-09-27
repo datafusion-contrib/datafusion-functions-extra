@@ -259,8 +259,6 @@ async fn test_skewness_int64() {
         .run_and_format("SELECT skewness(int64_col) FROM test_table")
         .await;
 
-    println!("{:?}", &actual);
-
     insta::assert_yaml_snapshot!(actual, @r###"
         - +--------------------------------+
         - "| skewness(test_table.int64_col) |"
