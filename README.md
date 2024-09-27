@@ -77,6 +77,14 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 -- | 2                   |
 -- +---------------------+
 
+-- Computes the skewness value
+SELECT skewness(col) FROM VALUES (-10), (-20), (100), (1000), (1000) AS tab(col);
+-- Results in
+-- +---------------------+
+-- | skewness(tab.col)   |
+-- +---------------------+
+-- | 0.574511614753      |
+-- +---------------------+
 ```
 
 ## Done
@@ -84,3 +92,4 @@ SELECT min_by(x, y) FROM VALUES (1, 10), (2, 5), (3, 15), (4, 8) as tab(x, y);
 - [x] `mode(expression) -> scalar` - Returns the most frequent (mode) value from a column of data.
 - [x] `max_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the maximum value of `expression2`.
 - [x] `min_by(expression1, expression2) -> scalar` - Returns the value of `expression1` associated with the minimum value of `expression2`.
+- [x] `skewness(expression) -> scalar` - Computes the skewness value for `expression`.

@@ -250,3 +250,39 @@ async fn test_max_by_and_min_by() {
     - +---------------------+
     "###);
 }
+
+#[tokio::test]
+async fn test_skewness_int64() {
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution
+        .run_and_format("SELECT skewness(int64_col) FROM test_table")
+        .await;
+
+    println!("{:?}", &actual);
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+        - +--------------------------------+
+        - "| skewness(test_table.int64_col) |"
+        - +--------------------------------+
+        - "| -0.8573214099741201            |"
+        - +--------------------------------+
+    "###);
+}
+
+#[tokio::test]
+async fn test_skewness_float64() {
+    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+
+    let actual = execution
+        .run_and_format("SELECT skewness(float64_col) FROM test_table")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+        - +----------------------------------+
+        - "| skewness(test_table.float64_col) |"
+        - +----------------------------------+
+        - "| -0.8573214099741201              |"
+        - +----------------------------------+
+    "###);
+}
