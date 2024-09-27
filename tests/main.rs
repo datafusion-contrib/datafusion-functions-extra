@@ -280,4 +280,33 @@ async fn test_kurtosis_pop() {
     - "| -0.9599999999999755                  |"
     - +--------------------------------------+
 "###);
+
+    let actual = execution
+        .run_and_format("SELECT kurtosis_pop(col) FROM VALUES (1.0) as tab(col)")
+        .await;
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +-----------------------+
+    - "| kurtosis_pop(tab.col) |"
+    - +-----------------------+
+    - "|                       |"
+    - +-----------------------+
+"###);
+
+    let actual = execution.run_and_format("SELECT kurtosis_pop(1.0)").await;
+    insta::assert_yaml_snapshot!(actual, @r###"
+    - +--------------------------+
+    - "| kurtosis_pop(Float64(1)) |"
+    - +--------------------------+
+    - "|                          |"
+    - +--------------------------+
+"###);
+
+    let actual = execution.run_and_format("SELECT kurtosis_pop(null)").await;
+    insta::assert_yaml_snapshot!(actual, @r###"
+- +--------------------+
+- "| kurtosis_pop(NULL) |"
+- +--------------------+
+- "|                    |"
+- +--------------------+
+"###);
 }
