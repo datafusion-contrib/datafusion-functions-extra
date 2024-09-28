@@ -364,3 +364,74 @@ async fn test_skewness() {
         - +-------------------+
     "###);
 }
+
+#[tokio::test]
+async fn test_kurtosis() {
+    let mut execution = TestExecution::new().await.unwrap();
+
+    let actual = execution
+        .run_and_format("SELECT kurtosis(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(col);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +-------------------+
+          - "| kurtosis(tab.col) |"
+          - +-------------------+
+          - "| 4.777292927667962 |"
+          - +-------------------+
+    "###);
+
+    let actual = execution
+        .run_and_format("SELECT kurtosis(col) FROM VALUES ('1'), ('10'), ('100'), ('10'), ('1') as tab(col);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +-------------------+
+          - "| kurtosis(tab.col) |"
+          - +-------------------+
+          - "| 4.777292927667962 |"
+          - +-------------------+
+    "###);
+
+    let actual = execution
+        .run_and_format("SELECT kurtosis(col) FROM VALUES (1.0), (2.0), (3.0) as tab(col);")
+        .await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +-------------------+
+          - "| kurtosis(tab.col) |"
+          - +-------------------+
+          - "|                   |"
+          - +-------------------+
+    "###);
+
+    let actual = execution.run_and_format("SELECT kurtosis(1);").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +--------------------+
+          - "| kurtosis(Int64(1)) |"
+          - +--------------------+
+          - "|                    |"
+          - +--------------------+
+    "###);
+
+    let actual = execution.run_and_format("SELECT kurtosis(1.0);").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +----------------------+
+          - "| kurtosis(Float64(1)) |"
+          - +----------------------+
+          - "|                      |"
+          - +----------------------+
+    "###);
+
+    let actual = execution.run_and_format("SELECT kurtosis(null);").await;
+
+    insta::assert_yaml_snapshot!(actual, @r###"
+          - +----------------+
+          - "| kurtosis(NULL) |"
+          - +----------------+
+          - "|                |"
+          - +----------------+
+    "###);
+}
