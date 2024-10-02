@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml?query=branch%3Amain)
 
-<!-- [![Crates.io](https://img.shields.io/crates/v/datafusion-functions-extra?color=green)](https://crates.io/crates/datafusion-functions-extra) -->
+[![Crates.io](https://img.shields.io/crates/v/datafusion-functions-extra?color=green)](https://crates.io/crates/datafusion-functions-extra)
 
 **Note:** This is not an official Apache Software Foundation release.
 
