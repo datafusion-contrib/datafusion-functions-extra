@@ -122,7 +122,7 @@ where
                 }
                 std::cmp::Ordering::Equal => {
                     max_value = match max_value {
-                        Some(ref current_max_value) if value < current_max_value => Some(*value),
+                        Some(ref current_max_value) if value > current_max_value => Some(*value),
                         Some(ref current_max_value) => Some(*current_max_value),
                         None => Some(*value),
                     };
@@ -234,7 +234,7 @@ where
                 }
                 std::cmp::Ordering::Equal => {
                     max_value = match max_value {
-                        Some(current_max_value) if value.0 < current_max_value => Some(value.0),
+                        Some(current_max_value) if value.0 > current_max_value => Some(value.0),
                         Some(current_max_value) => Some(current_max_value),
                         None => Some(value.0),
                     };
@@ -305,7 +305,7 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Int64Type>(Some(2), &DataType::Int64)?
+            ScalarValue::new_primitive::<Int64Type>(Some(3), &DataType::Int64)?
         );
         Ok(())
     }
@@ -362,7 +362,7 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Float64Type>(Some(2.0), &DataType::Float64)?
+            ScalarValue::new_primitive::<Float64Type>(Some(3.0), &DataType::Float64)?
         );
         Ok(())
     }
@@ -435,7 +435,7 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Date64Type>(Some(1609545600000), &DataType::Date64)?
+            ScalarValue::new_primitive::<Date64Type>(Some(1609632000000), &DataType::Date64)?
         );
         Ok(())
     }
@@ -515,7 +515,7 @@ mod tests {
         assert_eq!(
             result,
             ScalarValue::new_primitive::<Time64MicrosecondType>(
-                Some(7200000000),
+                Some(10800000000),
                 &DataType::Time64(TimeUnit::Microsecond)
             )?
         );
