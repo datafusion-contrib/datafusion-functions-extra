@@ -37,7 +37,7 @@ CREATE TABLE test_table (
 "#;
 
 #[tokio::test]
-async fn test_mode_utf8() {
+async fn test_mode() {
     let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
     let actual = execution.run_and_format("SELECT MODE(utf8_col) FROM test_table").await;
@@ -49,10 +49,6 @@ async fn test_mode_utf8() {
           - "| apple                     |"
           - +---------------------------+
     "###);
-}
-#[tokio::test]
-async fn test_mode_int64() {
-    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
     let actual = execution.run_and_format("SELECT MODE(int64_col) FROM test_table").await;
 
@@ -63,11 +59,6 @@ async fn test_mode_int64() {
           - "| 3                          |"
           - +----------------------------+
     "###);
-}
-
-#[tokio::test]
-async fn test_mode_float64() {
-    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
     let actual = execution
         .run_and_format("SELECT MODE(float64_col) FROM test_table")
@@ -80,11 +71,6 @@ async fn test_mode_float64() {
           - "| 3.0                          |"
           - +------------------------------+
     "###);
-}
-
-#[tokio::test]
-async fn test_mode_date64() {
-    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
     let actual = execution
         .run_and_format("SELECT MODE(date64_col) FROM test_table")

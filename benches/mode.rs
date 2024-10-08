@@ -17,7 +17,7 @@
 
 use std::sync::Arc;
 
-use arrow::util::bench_util::create_primitive_array;
+use arrow::util::bench_util::{create_primitive_array, create_string_array};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use datafusion::{
     arrow::{
@@ -27,14 +27,28 @@ use datafusion::{
     },
     logical_expr::Accumulator,
 };
-use datafusion_functions_extra::common::mode::PrimitiveModeAccumulator;
+use datafusion_functions_extra::common::mode::{BytesModeAccumulator, PrimitiveModeAccumulator};
 
-fn prepare_mode_accumulator() -> Box<dyn Accumulator> {
+fn prepare_primitive_mode_accumulator() -> Box<dyn Accumulator> {
     Box::new(PrimitiveModeAccumulator::<Int32Type>::new(&DataType::Int32))
 }
 
-fn mode_bench(c: &mut Criterion, name: &str, values: ArrayRef) {
-    let mut accumulator = prepare_mode_accumulator();
+fn prepare_bytes_mode_accumulator() -> Box<dyn Accumulator> {
+    Box::new(BytesModeAccumulator::new(&DataType::Utf8))
+}
+
+fn mode_bench_primitive(c: &mut Criterion, name: &str, values: ArrayRef) {
+    let mut accumulator = prepare_primitive_mode_accumulator();
+    c.bench_function(name, |b| {
+        b.iter(|| {
+            accumulator.update_batch(&[values.clone()]).unwrap();
+            black_box(accumulator.evaluate().unwrap());
+        });
+    });
+}
+
+fn mode_bench_bytes(c: &mut Criterion, name: &str, values: ArrayRef) {
+    let mut accumulator = prepare_bytes_mode_accumulator();
     c.bench_function(name, |b| {
         b.iter(|| {
             accumulator.update_batch(&[values.clone()]).unwrap();
@@ -44,17 +58,32 @@ fn mode_bench(c: &mut Criterion, name: &str, values: ArrayRef) {
 }
 
 fn mode_benchmark(c: &mut Criterion) {
-    // Case: No nulls
-    let values = Arc::new(create_primitive_array::<Int32Type>(8192, 0.0)) as ArrayRef;
-    mode_bench(c, "mode benchmark no nulls", values);
+    let sizes = [100_000, 1_000_000];
+    let null_percentages = [0.0, 0.3, 0.7];
 
-    // Case: 30% nulls
-    let values = Arc::new(create_primitive_array::<Int32Type>(8192, 0.3)) as ArrayRef;
-    mode_bench(c, "mode benchmark 30% nulls", values);
+    for &size in &sizes {
+        for &null_percentage in &null_percentages {
+            let values = Arc::new(create_primitive_array::<Int32Type>(size, null_percentage)) as ArrayRef;
+            let name = format!(
+                "PrimitiveModeAccumulator: {} elements, {}% nulls",
+                size,
+                null_percentage * 100.0
+            );
+            mode_bench_primitive(c, &name, values);
+        }
+    }
 
-    // Case: 70% nulls
-    let values = Arc::new(create_primitive_array::<Int32Type>(8192, 0.7)) as ArrayRef;
-    mode_bench(c, "mode benchmark 70% nulls", values);
+    for &size in &sizes {
+        for &null_percentage in &null_percentages {
+            let values = Arc::new(create_string_array::<i32>(size, null_percentage)) as ArrayRef;
+            let name = format!(
+                "BytesModeAccumulator: {} elements, {}% nulls",
+                size,
+                null_percentage * 100.0
+            );
+            mode_bench_bytes(c, &name, values);
+        }
+    }
 }
 
 criterion_group!(benches, mode_benchmark);

@@ -29,22 +29,18 @@ use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::not_impl_err;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
-use datafusion::physical_expr::binary_map::OutputType;
 
 use std::any::Any;
 use std::fmt::Debug;
 
-use crate::common::mode::{
-    BytesModeAccumulator, BytesViewModeAccumulator, FloatModeAccumulator, PrimitiveModeAccumulator,
-};
+use crate::common::mode::{BytesModeAccumulator, FloatModeAccumulator, PrimitiveModeAccumulator};
 
 make_udaf_expr_and_func!(ModeFunction, mode, x, "Calculates the most frequent value.", mode_udaf);
 
 /// The `ModeFunction` calculates the mode (most frequent value) from a set of values.
 ///
 /// - Null values are ignored during the calculation.
-/// - If multiple values have the same frequency, the first encountered value with the highest frequency is returned.
-/// - In the case of `Utf8` or `Utf8View`, the first value encountered in the original order with the highest frequency is returned.
+/// - If multiple values have the same frequency, the MAX value with the highest frequency is returned.
 pub struct ModeFunction {
     signature: Signature,
 }
@@ -141,9 +137,7 @@ impl AggregateUDFImpl for ModeFunction {
             DataType::Float32 => Box::new(FloatModeAccumulator::<Float32Type>::new(data_type)),
             DataType::Float64 => Box::new(FloatModeAccumulator::<Float64Type>::new(data_type)),
 
-            DataType::Utf8 => Box::new(BytesModeAccumulator::<i32>::new(OutputType::Utf8)),
-            DataType::LargeUtf8 => Box::new(BytesModeAccumulator::<i64>::new(OutputType::Utf8)),
-            DataType::Utf8View => Box::new(BytesViewModeAccumulator::new(OutputType::Utf8View)),
+            DataType::Utf8 | DataType::Utf8View | DataType::LargeUtf8 => Box::new(BytesModeAccumulator::new(data_type)),
             _ => {
                 return not_impl_err!("Unsupported data type: {:?} for mode function", data_type);
             }

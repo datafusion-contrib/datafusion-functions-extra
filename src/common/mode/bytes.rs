@@ -15,81 +15,88 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::sync::Arc;
-
+use arrow::array::ArrayAccessor;
+use arrow::array::ArrayIter;
 use arrow::array::ArrayRef;
 use arrow::array::AsArray;
-use arrow::array::OffsetSizeTrait;
 use arrow::datatypes::DataType;
 use datafusion::arrow;
-use datafusion::common::cast::as_list_array;
 use datafusion::common::cast::as_primitive_array;
-use datafusion::common::utils::array_into_list_array_nullable;
+use datafusion::common::cast::as_string_array;
 use datafusion::error::Result;
 use datafusion::logical_expr::Accumulator;
-use datafusion::physical_expr::binary_map::ArrowBytesSet;
-use datafusion::physical_expr::binary_map::OutputType;
-use datafusion::physical_expr_common::binary_view_map::ArrowBytesViewSet;
 use datafusion::scalar::ScalarValue;
-
-use crate::common::collections::ArrowBytesMap;
-use crate::common::collections::ArrowBytesViewMap;
+use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct BytesModeAccumulator<O: OffsetSizeTrait> {
-    values: ArrowBytesSet<O>,
-    value_counts: ArrowBytesMap<O, i64>,
+pub struct BytesModeAccumulator {
+    value_counts: HashMap<String, i64>,
+    data_type: DataType,
 }
 
-impl<O: OffsetSizeTrait> BytesModeAccumulator<O> {
-    pub fn new(output_type: OutputType) -> Self {
+impl BytesModeAccumulator {
+    pub fn new(data_type: &DataType) -> Self {
         Self {
-            values: ArrowBytesSet::new(output_type),
-            value_counts: ArrowBytesMap::new(output_type),
+            value_counts: HashMap::new(),
+            data_type: data_type.clone(),
+        }
+    }
+
+    fn update_counts<'a, V>(&mut self, array: V)
+    where
+        V: ArrayAccessor<Item = &'a str>,
+    {
+        for value in ArrayIter::new(array).flatten() {
+            let key = value;
+            if let Some(count) = self.value_counts.get_mut(key) {
+                *count += 1;
+            } else {
+                self.value_counts.insert(key.to_string(), 1);
+            }
         }
     }
 }
 
-impl<O: OffsetSizeTrait> Accumulator for BytesModeAccumulator<O> {
+impl Accumulator for BytesModeAccumulator {
     fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
         if values.is_empty() {
             return Ok(());
         }
 
-        self.values.insert(&values[0]);
-
-        self.value_counts.insert_or_update(
-            &values[0],
-            |maybe_value| {
-                if maybe_value.is_none() {
-                    i64::MIN
-                } else {
-                    1i64
-                }
-            },
-            |count| *count += 1,
-        );
+        match &self.data_type {
+            DataType::Utf8View => {
+                let array = values[0].as_string_view();
+                self.update_counts(array);
+            }
+            _ => {
+                let array = values[0].as_string::<i32>();
+                self.update_counts(array);
+            }
+        };
 
         Ok(())
     }
 
     fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        let values = self.values.take().into_state();
-        let payloads: Vec<ScalarValue> = self
+        let values: Vec<ScalarValue> = self
             .value_counts
-            .take()
-            .get_payloads(&values)
-            .into_iter()
-            .map(|count| match count {
-                Some(c) => ScalarValue::Int64(Some(c)),
-                None => ScalarValue::Int64(None),
-            })
+            .keys()
+            .map(|key| ScalarValue::Utf8(Some(key.to_string())))
             .collect();
 
-        let values_list = Arc::new(array_into_list_array_nullable(values));
-        let payloads_list = ScalarValue::new_list_nullable(&payloads, &DataType::Int64);
+        let frequencies: Vec<ScalarValue> = self
+            .value_counts
+            .values()
+            .map(|&count| ScalarValue::Int64(Some(count)))
+            .collect();
 
-        Ok(vec![ScalarValue::List(values_list), ScalarValue::List(payloads_list)])
+        let values_scalar = ScalarValue::new_list_nullable(&values, &DataType::Utf8);
+        let frequencies_scalar = ScalarValue::new_list_nullable(&frequencies, &DataType::Int64);
+
+        Ok(vec![
+            ScalarValue::List(values_scalar),
+            ScalarValue::List(frequencies_scalar),
+        ])
     }
 
     fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
@@ -97,168 +104,53 @@ impl<O: OffsetSizeTrait> Accumulator for BytesModeAccumulator<O> {
             return Ok(());
         }
 
-        let arr = as_list_array(&states[0])?;
-        let counts = as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
+        let values_array = as_string_array(&states[0])?;
+        let counts_array = as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
 
-        arr.iter().zip(counts.iter()).try_for_each(|(maybe_list, maybe_count)| {
-            if let (Some(list), Some(count)) = (maybe_list, maybe_count) {
-                // Insert or update the count for each value
-                self.value_counts
-                    .insert_or_update(&list, |_| count, |existing_count| *existing_count += count);
-            }
-            Ok(())
-        })
-    }
-
-    fn evaluate(&mut self) -> Result<ScalarValue> {
-        let mut max_index: Option<usize> = None;
-        let mut max_count: i64 = 0;
-
-        let values = self.values.take().into_state();
-        let counts = self.value_counts.take().get_payloads(&values);
-
-        for (i, count) in counts.into_iter().enumerate() {
-            if let Some(c) = count {
-                if c > max_count {
-                    max_count = c;
-                    max_index = Some(i);
-                }
+        for (i, value_option) in values_array.iter().enumerate() {
+            if let Some(value) = value_option {
+                let count = counts_array.value(i);
+                let entry = self.value_counts.entry(value.to_string()).or_insert(0);
+                *entry += count;
             }
         }
 
-        match max_index {
-            Some(index) => {
-                let array = values.as_string::<O>();
-                let mode_value = array.value(index);
-                if mode_value.is_empty() {
-                    Ok(ScalarValue::Utf8(None))
-                } else if O::IS_LARGE {
-                    Ok(ScalarValue::LargeUtf8(Some(mode_value.to_string())))
-                } else {
-                    Ok(ScalarValue::Utf8(Some(mode_value.to_string())))
-                }
-            }
-            None => {
-                if O::IS_LARGE {
-                    Ok(ScalarValue::LargeUtf8(None))
-                } else {
-                    Ok(ScalarValue::Utf8(None))
-                }
-            }
-        }
-    }
-
-    fn size(&self) -> usize {
-        self.values.size() + self.value_counts.size()
-    }
-}
-
-#[derive(Debug)]
-pub struct BytesViewModeAccumulator {
-    values: ArrowBytesViewSet,
-    value_counts: ArrowBytesViewMap<i64>,
-}
-
-impl BytesViewModeAccumulator {
-    pub fn new(output_type: OutputType) -> Self {
-        Self {
-            values: ArrowBytesViewSet::new(output_type),
-            value_counts: ArrowBytesViewMap::new(output_type),
-        }
-    }
-}
-
-impl Accumulator for BytesViewModeAccumulator {
-    fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        if values.is_empty() {
-            return Ok(());
-        }
-
-        self.values.insert(&values[0]);
-
-        self.value_counts.insert_or_update(
-            &values[0],
-            |maybe_value| {
-                if maybe_value.is_none() {
-                    i64::MIN
-                } else {
-                    1i64
-                }
-            },
-            |count| *count += 1,
-        );
         Ok(())
     }
 
-    fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        let values = self.values.take().into_state();
-        let payloads: Vec<ScalarValue> = self
-            .value_counts
-            .take()
-            .get_payloads(&values)
-            .into_iter()
-            .map(|count| match count {
-                Some(c) => ScalarValue::Int64(Some(c)),
-                None => ScalarValue::Int64(None),
-            })
-            .collect();
-
-        let values_list = Arc::new(array_into_list_array_nullable(values));
-        let payloads_list = ScalarValue::new_list_nullable(&payloads, &DataType::Int64);
-
-        Ok(vec![ScalarValue::List(values_list), ScalarValue::List(payloads_list)])
-    }
-
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
-        if states.is_empty() {
-            return Ok(());
-        }
-
-        let arr = as_list_array(&states[0])?;
-        let counts = as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
-
-        arr.iter().zip(counts.iter()).try_for_each(|(maybe_list, maybe_count)| {
-            if let (Some(list), Some(count)) = (maybe_list, maybe_count) {
-                // Insert or update the count for each value
-                self.value_counts
-                    .insert_or_update(&list, |_| count, |existing_count| *existing_count += count);
-            }
-            Ok(())
-        })
-    }
-
     fn evaluate(&mut self) -> Result<ScalarValue> {
-        let mut max_index: Option<usize> = None;
-        let mut max_count: i64 = 0;
-
-        let values = self.values.take().into_state();
-        let counts = self.value_counts.take().get_payloads(&values);
-
-        for (i, count) in counts.into_iter().enumerate() {
-            if let Some(c) = count {
-                if c > max_count {
-                    max_count = c;
-                    max_index = Some(i);
-                }
-            }
+        if self.value_counts.is_empty() {
+            return match &self.data_type {
+                DataType::Utf8View => Ok(ScalarValue::Utf8View(None)),
+                _ => Ok(ScalarValue::Utf8(None)),
+            };
         }
 
-        match max_index {
-            Some(index) => {
-                let array = values.as_string_view();
-                let mode_value = array.value(index);
-                if mode_value.is_empty() {
-                    Ok(ScalarValue::Utf8View(None))
-                } else {
-                    Ok(ScalarValue::Utf8View(Some(mode_value.to_string())))
-                }
-            }
-            None => Ok(ScalarValue::Utf8View(None)),
+        let mode = self
+            .value_counts
+            .iter()
+            .max_by(|a, b| {
+                // First compare counts
+                a.1.cmp(b.1)
+                    // If counts are equal, compare keys in reverse order to get the maximum string
+                    .then_with(|| b.0.cmp(a.0))
+            })
+            .map(|(value, _)| value.to_string());
+
+        match mode {
+            Some(result) => match &self.data_type {
+                DataType::Utf8View => Ok(ScalarValue::Utf8View(Some(result))),
+                _ => Ok(ScalarValue::Utf8(Some(result))),
+            },
+            None => match &self.data_type {
+                DataType::Utf8View => Ok(ScalarValue::Utf8View(None)),
+                _ => Ok(ScalarValue::Utf8(None)),
+            },
         }
     }
 
     fn size(&self) -> usize {
-        self.values.size() + self.value_counts.size()
+        self.value_counts.capacity() * std::mem::size_of::<(String, i64)>() + std::mem::size_of_val(&self.data_type)
     }
 }
 
@@ -270,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_single_mode_utf8() -> Result<()> {
-        let mut acc = BytesModeAccumulator::<i32>::new(OutputType::Utf8);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8);
         let values: ArrayRef = Arc::new(StringArray::from(vec![
             Some("apple"),
             Some("banana"),
@@ -289,7 +181,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_tie_utf8() -> Result<()> {
-        let mut acc = BytesModeAccumulator::<i32>::new(OutputType::Utf8);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8);
         let values: ArrayRef = Arc::new(StringArray::from(vec![
             Some("apple"),
             Some("banana"),
@@ -307,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_all_nulls_utf8() -> Result<()> {
-        let mut acc = BytesModeAccumulator::<i32>::new(OutputType::Utf8);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8);
         let values: ArrayRef = Arc::new(StringArray::from(vec![None as Option<&str>, None, None]));
 
         acc.update_batch(&[values])?;
@@ -319,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_with_nulls_utf8() -> Result<()> {
-        let mut acc = BytesModeAccumulator::<i32>::new(OutputType::Utf8);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8);
         let values: ArrayRef = Arc::new(StringArray::from(vec![
             Some("apple"),
             None,
@@ -340,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_single_mode_utf8view() -> Result<()> {
-        let mut acc = BytesViewModeAccumulator::new(OutputType::Utf8View);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8View);
         let values: ArrayRef = Arc::new(GenericByteViewArray::from(vec![
             Some("apple"),
             Some("banana"),
@@ -359,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_tie_utf8view() -> Result<()> {
-        let mut acc = BytesViewModeAccumulator::new(OutputType::Utf8View);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8View);
         let values: ArrayRef = Arc::new(GenericByteViewArray::from(vec![
             Some("apple"),
             Some("banana"),
@@ -377,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_all_nulls_utf8view() -> Result<()> {
-        let mut acc = BytesViewModeAccumulator::new(OutputType::Utf8View);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8View);
         let values: ArrayRef = Arc::new(GenericByteViewArray::from(vec![None as Option<&str>, None, None]));
 
         acc.update_batch(&[values])?;
@@ -389,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_mode_accumulator_with_nulls_utf8view() -> Result<()> {
-        let mut acc = BytesViewModeAccumulator::new(OutputType::Utf8View);
+        let mut acc = BytesModeAccumulator::new(&DataType::Utf8View);
         let values: ArrayRef = Arc::new(GenericByteViewArray::from(vec![
             Some("apple"),
             None,
