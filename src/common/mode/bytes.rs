@@ -47,11 +47,11 @@ impl BytesModeAccumulator {
         V: ArrayAccessor<Item = &'a str>,
     {
         for value in ArrayIter::new(array).flatten() {
-            let key = value.to_string();
-            if let Some(count) = self.value_counts.get_mut(&key) {
+            let key = value;
+            if let Some(count) = self.value_counts.get_mut(key) {
                 *count += 1;
             } else {
-                self.value_counts.insert(key, 1);
+                self.value_counts.insert(key.to_string(), 1);
             }
         }
     }
