@@ -39,12 +39,17 @@ arrow = { version = "53.0.0", features = ["test_utils"] }
 datafusion = "42"
 log = "^0.4"
 paste = "1"
+async-trait = "0.1.83"
+sqlparser = { version = "0.51.0", features = ["visitor"] }
+thiserror = "1.0.44"
 
 [dev-dependencies]
 arrow = { version = "53.0.0", features = ["test_utils"] }
 criterion = { version = "0.5", features = ["async_tokio"] }
 insta = { version = "1.40.0", features = ["yaml"] }
 tokio = { version = "1.36", features = ["full"] }
+futures = "0.3"
+tempfile = "3"
 sqllogictest = { version = "0.22.0" }
 
 [lints.clippy]
