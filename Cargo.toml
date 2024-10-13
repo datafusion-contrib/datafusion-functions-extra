@@ -30,6 +30,10 @@ rust-version = "1.76"
 name = "datafusion_functions_extra"
 path = "src/lib.rs"
 
+[[test]]
+name= "sqllogictest"
+path = "tests/sqllogictest/sqllogictest.rs"
+
 [dependencies]
 arrow = { version = "53.0.0", features = ["test_utils"] }
 datafusion = "42"
@@ -41,6 +45,7 @@ arrow = { version = "53.0.0", features = ["test_utils"] }
 criterion = { version = "0.5", features = ["async_tokio"] }
 insta = { version = "1.40.0", features = ["yaml"] }
 tokio = { version = "1.36", features = ["full"] }
+sqllogictest = { version = "0.22.0" }
 
 [lints.clippy]
 dbg_macro = "deny"

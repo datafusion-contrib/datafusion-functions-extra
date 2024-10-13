@@ -1,0 +1,34 @@
+# Kurtosis test cases
+
+statement ok
+CREATE TABLE tab(col DOUBLE);
+
+query I
+SELECT kurtosis(col) FROM VALUES (1.0), (10.0), (100.0), (10.0), (1.0) as tab(col);
+----
+4.777292927667962
+
+query I
+SELECT kurtosis(col) FROM VALUES ('1'), ('10'), ('100'), ('10'), ('1') as tab(col);
+----
+4.777292927667962
+
+query I
+SELECT kurtosis(col) FROM VALUES (1.0), (2.0), (3.0) as tab(col);
+----
+NULL
+
+query I
+SELECT kurtosis(1);
+----
+NULL
+
+query I
+SELECT kurtosis(1.0);
+----
+NULL
+
+query I
+SELECT kurtosis(null);
+----
+NULL
