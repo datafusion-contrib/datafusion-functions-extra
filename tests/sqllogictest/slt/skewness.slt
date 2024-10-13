@@ -1,0 +1,42 @@
+# Create test table and populate it
+statement ok
+CREATE TABLE test_table (
+    utf8_col VARCHAR,
+    int64_col BIGINT,
+    float64_col DOUBLE,
+    date64_col DATE,
+    time64_col TIME
+) AS VALUES
+    ('apple', 1, 1.0, DATE '2021-01-01', TIME '01:00:00'),
+    ('banana', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('apple', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('orange', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('banana', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('apple', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    (NULL, NULL, NULL, NULL, NULL);
+
+# Skewness test cases
+
+# Test with int64 column
+query I
+SELECT skewness(int64_col) FROM test_table;
+----
+-0.8573214099741201
+
+# Test with float64 column
+query I
+SELECT skewness(float64_col) FROM test_table;
+----
+-0.8573214099741201
+
+# Test with a single value
+query I
+SELECT skewness(1.0);
+----
+NULL
+
+# Test with two values
+query I
+SELECT skewness(col) FROM VALUES (1.0), (2.0) as tab(col);
+----
+NULL

@@ -1,0 +1,48 @@
+# Kurtosis Population test cases
+
+# Create test table and populate it
+statement ok
+CREATE TABLE test_table (
+    utf8_col VARCHAR,
+    int64_col BIGINT,
+    float64_col DOUBLE,
+    date64_col DATE,
+    time64_col TIME
+) AS VALUES
+    ('apple', 1, 1.0, DATE '2021-01-01', TIME '01:00:00'),
+    ('banana', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('apple', 2, 2.0, DATE '2021-01-02', TIME '02:00:00'),
+    ('orange', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('banana', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    ('apple', 3, 3.0, DATE '2021-01-03', TIME '03:00:00'),
+    (NULL, NULL, NULL, NULL, NULL);
+
+# Test kurtosis_pop with int64 column
+query I
+SELECT kurtosis_pop(int64_col) FROM test_table;
+----
+-0.9599999999999755
+
+# Test kurtosis_pop with float64 column
+query I
+SELECT kurtosis_pop(float64_col) FROM test_table;
+----
+-0.9599999999999755
+
+# Test kurtosis_pop with a single value
+query I
+SELECT kurtosis_pop(col) FROM VALUES (1.0) as tab(col);
+----
+NULL
+
+# Test kurtosis_pop with a literal value
+query I
+SELECT kurtosis_pop(1.0);
+----
+NULL
+
+# Test kurtosis_pop with NULL
+query I
+SELECT kurtosis_pop(null);
+----
+NULL
