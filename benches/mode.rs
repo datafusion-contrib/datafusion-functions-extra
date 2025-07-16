@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::sync::Arc;
-
 use arrow::util::bench_util::{create_primitive_array, create_string_array};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use datafusion::{
     arrow::{
         self,
@@ -28,6 +26,8 @@ use datafusion::{
     logical_expr::Accumulator,
 };
 use datafusion_functions_extra::common::mode::{BytesModeAccumulator, PrimitiveModeAccumulator};
+use std::hint::black_box;
+use std::sync::Arc;
 
 fn prepare_primitive_mode_accumulator() -> Box<dyn Accumulator> {
     Box::new(PrimitiveModeAccumulator::<Int32Type>::new(&DataType::Int32))

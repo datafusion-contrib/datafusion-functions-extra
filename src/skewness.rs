@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::array::{ArrayRef, AsArray};
-use arrow::datatypes::{Float64Type, UInt64Type};
+use datafusion::arrow::array::{ArrayRef, AsArray};
 use datafusion::arrow::datatypes::{DataType, Field};
+use datafusion::arrow::datatypes::{Float64Type, UInt64Type};
 use datafusion::common::ScalarValue;
-use datafusion::logical_expr::{function::AccumulatorArgs, function::StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
+use datafusion::logical_expr::{function::AccumulatorArgs, function::StateFieldsArgs};
 use std::any::Any;
 use std::fmt::Debug;
 use std::ops::{Div, Mul, Sub};

@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![deny(warnings)]
+
 use log::debug;
 use mode::mode_udaf;
 use std::sync::Arc;

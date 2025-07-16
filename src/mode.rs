@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::datatypes::{
-    Date32Type, Date64Type, Float16Type, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
+use datafusion::arrow::datatypes::{
+    Date32Type, Date64Type, Float16Type, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     Time32MillisecondType, Time32SecondType, Time64MicrosecondType, Time64NanosecondType, TimestampMicrosecondType,
-    TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType, UInt16Type, UInt32Type, UInt64Type,
-    UInt8Type,
+    TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType, UInt8Type, UInt16Type, UInt32Type,
+    UInt64Type,
 };
-use datafusion::arrow;
 
 use datafusion::error::Result;
 

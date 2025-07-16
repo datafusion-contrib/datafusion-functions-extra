@@ -1,14 +1,14 @@
-use arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::DataType;
 use datafusion::error::DataFusionError;
 use datafusion::functions_aggregate::first_last::last_value_udaf;
 use datafusion::logical_expr::expr::AggregateFunction;
 use datafusion::logical_expr::expr::Sort;
 use datafusion::logical_expr::simplify::SimplifyInfo;
-use datafusion::logical_expr::{expr, function, Accumulator, AggregateUDFImpl};
+use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, expr, function};
 use datafusion::prelude::Expr;
 use datafusion::{
     common::exec_err,
-    logical_expr::{function::AccumulatorArgs, Signature, Volatility},
+    logical_expr::{Signature, Volatility, function::AccumulatorArgs},
 };
 use std::any::Any;
 use std::fmt::Debug;

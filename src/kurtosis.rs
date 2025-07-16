@@ -23,7 +23,7 @@ use std::fmt::Debug;
 
 use datafusion::common::cast::as_float64_array;
 use datafusion::common::downcast_value;
-use datafusion::common::DataFusionError;
+use datafusion::error::DataFusionError;
 use datafusion::error::Result;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};

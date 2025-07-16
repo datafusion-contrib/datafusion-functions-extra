@@ -18,10 +18,11 @@
 // Copired from `datafusion/functions-aggregate/src/kurtosis_pop.rs`
 // Originally authored by goldmedal
 
-use arrow::array::{Array, ArrayRef, Float64Array, UInt64Array};
+use datafusion::arrow::array::{ArrayRef, Float64Array, UInt64Array};
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::cast::as_float64_array;
-use datafusion::common::{downcast_value, DataFusionError, Result, ScalarValue};
+use datafusion::common::{Result, ScalarValue, downcast_value};
+use datafusion::error::DataFusionError;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
 use std::any::Any;
