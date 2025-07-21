@@ -18,12 +18,12 @@
 use arrow::array::{ArrayRef, Float64Array, UInt64Array};
 use arrow::datatypes::{DataType, Field};
 use datafusion::arrow;
+use datafusion::arrow::datatypes::FieldRef;
 use std::any::Any;
 use std::fmt::Debug;
 
 use datafusion::common::cast::as_float64_array;
 use datafusion::common::downcast_value;
-use datafusion::error::DataFusionError;
 use datafusion::error::Result;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
@@ -58,7 +58,7 @@ impl Default for KurtosisFunction {
 impl KurtosisFunction {
     pub fn new() -> Self {
         Self {
-            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::Float64], Volatility::Immutable),
         }
     }
 }
@@ -84,13 +84,13 @@ impl AggregateUDFImpl for KurtosisFunction {
         Ok(Box::new(KurtosisAccumulator::new()))
     }
 
-    fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<Field>> {
+    fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
         Ok(vec![
-            Field::new("count", DataType::UInt64, true),
-            Field::new("sum", DataType::Float64, true),
-            Field::new("sum_sqr", DataType::Float64, true),
-            Field::new("sum_cub", DataType::Float64, true),
-            Field::new("sum_four", DataType::Float64, true),
+            Field::new("count", DataType::UInt64, true).into(),
+            Field::new("sum", DataType::Float64, true).into(),
+            Field::new("sum_sqr", DataType::Float64, true).into(),
+            Field::new("sum_cub", DataType::Float64, true).into(),
+            Field::new("sum_four", DataType::Float64, true).into(),
         ])
     }
 }

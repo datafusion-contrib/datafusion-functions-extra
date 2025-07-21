@@ -16,7 +16,7 @@
 // under the License.
 
 use datafusion::arrow::datatypes::{
-    Date32Type, Date64Type, Float16Type, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
+    Date32Type, Date64Type, FieldRef, Float16Type, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     Time32MillisecondType, Time32SecondType, Time64MicrosecondType, Time64NanosecondType, TimestampMicrosecondType,
     TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType, UInt8Type, UInt16Type, UInt32Type,
     UInt64Type,
@@ -83,12 +83,12 @@ impl AggregateUDFImpl for ModeFunction {
         Ok(arg_types[0].clone())
     }
 
-    fn state_fields(&self, args: StateFieldsArgs) -> Result<Vec<Field>> {
-        let value_type = args.input_types[0].clone();
+    fn state_fields(&self, args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
+        let value_type = args.input_fields[0].data_type().clone();
 
         Ok(vec![
-            Field::new("values", value_type, true),
-            Field::new("frequencies", DataType::UInt64, true),
+            Field::new("values", value_type, true).into(),
+            Field::new("frequencies", DataType::UInt64, true).into(),
         ])
     }
 

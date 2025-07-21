@@ -16,7 +16,7 @@
 // under the License.
 
 use datafusion::arrow::array::{ArrayRef, AsArray};
-use datafusion::arrow::datatypes::{DataType, Field};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::arrow::datatypes::{Float64Type, UInt64Type};
 use datafusion::common::ScalarValue;
 use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
@@ -50,7 +50,7 @@ impl SkewnessFunc {
     pub fn new() -> Self {
         Self {
             name: "skewness".to_string(),
-            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::Float64], Volatility::Immutable),
         }
     }
 }
@@ -75,12 +75,12 @@ impl AggregateUDFImpl for SkewnessFunc {
         Ok(Box::new(SkewnessAccumulator::new()))
     }
 
-    fn state_fields(&self, _args: StateFieldsArgs) -> datafusion::common::Result<Vec<Field>> {
+    fn state_fields(&self, _args: StateFieldsArgs) -> datafusion::common::Result<Vec<FieldRef>> {
         Ok(vec![
-            Field::new("count", DataType::UInt64, true),
-            Field::new("sum", DataType::Float64, true),
-            Field::new("sum_sqr", DataType::Float64, true),
-            Field::new("sum_cub", DataType::Float64, true),
+            Field::new("count", DataType::UInt64, true).into(),
+            Field::new("sum", DataType::Float64, true).into(),
+            Field::new("sum_sqr", DataType::Float64, true).into(),
+            Field::new("sum_cub", DataType::Float64, true).into(),
         ])
     }
 }

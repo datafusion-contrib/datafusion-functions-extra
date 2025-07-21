@@ -85,18 +85,18 @@ impl AggregateUDFImpl for MaxByFunction {
 
     fn simplify(&self) -> Option<function::AggregateFunctionSimplification> {
         let simplify = |mut aggr_func: expr::AggregateFunction, _: &dyn SimplifyInfo| {
-            let mut order_by = aggr_func.order_by.unwrap_or_default();
-            let (second_arg, first_arg) = (aggr_func.args.remove(1), aggr_func.args.remove(0));
+            let mut order_by = aggr_func.params.order_by.unwrap_or_default();
+            let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
 
             order_by.push(Sort::new(second_arg, true, false));
 
             Ok(Expr::AggregateFunction(AggregateFunction::new_udf(
                 last_value_udaf(),
                 vec![first_arg],
-                aggr_func.distinct,
-                aggr_func.filter,
+                aggr_func.params.distinct,
+                aggr_func.params.filter,
                 Some(order_by),
-                aggr_func.null_treatment,
+                aggr_func.params.null_treatment,
             )))
         };
         Some(Box::new(simplify))
@@ -166,18 +166,18 @@ impl AggregateUDFImpl for MinByFunction {
 
     fn simplify(&self) -> Option<function::AggregateFunctionSimplification> {
         let simplify = |mut aggr_func: expr::AggregateFunction, _: &dyn SimplifyInfo| {
-            let mut order_by = aggr_func.order_by.unwrap_or_default();
-            let (second_arg, first_arg) = (aggr_func.args.remove(1), aggr_func.args.remove(0));
+            let mut order_by = aggr_func.params.order_by.unwrap_or_default();
+            let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
 
             order_by.push(Sort::new(second_arg, false, false)); // false for ascending sort
 
             Ok(Expr::AggregateFunction(AggregateFunction::new_udf(
                 last_value_udaf(),
                 vec![first_arg],
-                aggr_func.distinct,
-                aggr_func.filter,
+                aggr_func.params.distinct,
+                aggr_func.params.filter,
                 Some(order_by),
-                aggr_func.null_treatment,
+                aggr_func.params.null_treatment,
             )))
         };
         Some(Box::new(simplify))
