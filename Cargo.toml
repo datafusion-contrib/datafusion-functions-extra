@@ -50,3 +50,7 @@ version = "1.43"
 [[bench]]
 name = "mode"
 harness = false
+
+[lints.clippy]
+dbg_macro = "deny"
+print_stdout = "deny"
