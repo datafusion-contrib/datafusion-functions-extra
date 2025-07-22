@@ -38,7 +38,7 @@ CREATE TABLE test_table (
 
 #[tokio::test]
 async fn test_mode() {
-    let mut execution = TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
+    let mut execution = utils::TestExecution::new().await.unwrap().with_setup(TEST_TABLE).await;
 
     let actual = execution.run_and_format("SELECT MODE(utf8_col) FROM test_table").await;
 

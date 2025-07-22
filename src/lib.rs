@@ -17,13 +17,10 @@
 
 #![deny(warnings)]
 
+use datafusion::{common as df_common, error, execution, logical_expr};
 use log::debug;
 use mode::mode_udaf;
-use std::sync::Arc;
-
-use datafusion::common::Result;
-use datafusion::execution::FunctionRegistry;
-use datafusion::logical_expr::AggregateUDF;
+use std::sync;
 
 #[macro_use]
 pub mod macros;
@@ -42,7 +39,7 @@ pub mod expr_extra_fn {
     pub use super::skewness::skewness;
 }
 
-pub fn all_extra_aggregate_functions() -> Vec<Arc<AggregateUDF>> {
+pub fn all_extra_aggregate_functions() -> Vec<sync::Arc<logical_expr::AggregateUDF>> {
     vec![
         mode_udaf(),
         max_min_by::max_by_udaf(),
@@ -54,15 +51,15 @@ pub fn all_extra_aggregate_functions() -> Vec<Arc<AggregateUDF>> {
 }
 
 /// Registers all enabled packages with a [`FunctionRegistry`]
-pub fn register_all_extra_functions(registry: &mut dyn FunctionRegistry) -> Result<()> {
-    let functions: Vec<Arc<AggregateUDF>> = all_extra_aggregate_functions();
+pub fn register_all_extra_functions(registry: &mut dyn execution::FunctionRegistry) -> df_common::Result<()> {
+    let functions: Vec<sync::Arc<logical_expr::AggregateUDF>> = all_extra_aggregate_functions();
 
     functions.into_iter().try_for_each(|udf| {
         let existing_udaf = registry.register_udaf(udf)?;
         if let Some(existing_udaf) = existing_udaf {
             debug!("Overwrite existing UDAF: {}", existing_udaf.name());
         }
-        Ok(()) as Result<()>
+        Ok(()) as error::Result<()>
     })?;
 
     Ok(())

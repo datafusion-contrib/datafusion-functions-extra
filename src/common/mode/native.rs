@@ -15,52 +15,43 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
+use datafusion::physical_expr::aggregate::utils::Hashable;
+use datafusion::{arrow, common, error, logical_expr, scalar};
+use std::{collections, fmt, hash};
 
-use datafusion::common::cast::as_primitive_array;
-use datafusion::error::Result;
-
-use arrow::{
-    array::{ArrayRef, ArrowPrimitiveType},
-    datatypes::DataType,
-};
-use datafusion::{arrow, logical_expr::Accumulator, physical_expr::aggregate::utils::Hashable, scalar::ScalarValue};
-
-#[derive(Debug)]
+#[derive(fmt::Debug)]
 pub struct PrimitiveModeAccumulator<T>
 where
-    T: ArrowPrimitiveType + Send,
-    T::Native: Eq + Hash,
+    T: arrow::array::ArrowPrimitiveType + Send,
+    T::Native: Eq + hash::Hash,
 {
-    value_counts: HashMap<T::Native, i64>,
-    data_type: DataType,
+    value_counts: collections::HashMap<T::Native, i64>,
+    data_type: arrow::datatypes::DataType,
 }
 
 impl<T> PrimitiveModeAccumulator<T>
 where
-    T: ArrowPrimitiveType + Send,
-    T::Native: Eq + Hash + Clone,
+    T: arrow::array::ArrowPrimitiveType + Send,
+    T::Native: Eq + hash::Hash + Clone,
 {
-    pub fn new(data_type: &DataType) -> Self {
+    pub fn new(data_type: &arrow::datatypes::DataType) -> Self {
         Self {
-            value_counts: HashMap::default(),
+            value_counts: collections::HashMap::default(),
             data_type: data_type.clone(),
         }
     }
 }
 
-impl<T> Accumulator for PrimitiveModeAccumulator<T>
+impl<T> logical_expr::Accumulator for PrimitiveModeAccumulator<T>
 where
-    T: ArrowPrimitiveType + Send + Debug,
-    T::Native: Eq + Hash + Clone + PartialOrd + Debug,
+    T: arrow::array::ArrowPrimitiveType + Send + fmt::Debug,
+    T::Native: Eq + hash::Hash + Clone + PartialOrd + fmt::Debug,
 {
-    fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
+    fn update_batch(&mut self, values: &[arrow::array::ArrayRef]) -> error::Result<()> {
         if values.is_empty() {
             return Ok(());
         }
-        let arr = as_primitive_array::<T>(&values[0])?;
+        let arr = common::cast::as_primitive_array::<T>(&values[0])?;
 
         for value in arr.iter().flatten() {
             let counter = self.value_counts.entry(value).or_insert(0);
@@ -70,35 +61,36 @@ where
         Ok(())
     }
 
-    fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        let values: Vec<ScalarValue> = self
+    fn state(&mut self) -> error::Result<Vec<scalar::ScalarValue>> {
+        let values: Vec<scalar::ScalarValue> = self
             .value_counts
             .keys()
-            .map(|key| ScalarValue::new_primitive::<T>(Some(*key), &self.data_type))
-            .collect::<Result<Vec<_>>>()?;
+            .map(|key| scalar::ScalarValue::new_primitive::<T>(Some(*key), &self.data_type))
+            .collect::<error::Result<Vec<_>>>()?;
 
-        let frequencies: Vec<ScalarValue> = self
+        let frequencies: Vec<scalar::ScalarValue> = self
             .value_counts
             .values()
-            .map(|count| ScalarValue::from(*count))
+            .map(|count| scalar::ScalarValue::from(*count))
             .collect();
 
-        let values_scalar = ScalarValue::new_list_nullable(&values, &self.data_type.clone());
-        let frequencies_scalar = ScalarValue::new_list_nullable(&frequencies, &DataType::Int64);
+        let values_scalar = scalar::ScalarValue::new_list_nullable(&values, &self.data_type.clone());
+        let frequencies_scalar =
+            scalar::ScalarValue::new_list_nullable(&frequencies, &arrow::datatypes::DataType::Int64);
 
         Ok(vec![
-            ScalarValue::List(values_scalar),
-            ScalarValue::List(frequencies_scalar),
+            scalar::ScalarValue::List(values_scalar),
+            scalar::ScalarValue::List(frequencies_scalar),
         ])
     }
 
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
+    fn merge_batch(&mut self, states: &[arrow::array::ArrayRef]) -> error::Result<()> {
         if states.is_empty() {
             return Ok(());
         }
 
-        let values_array = as_primitive_array::<T>(&states[0])?;
-        let counts_array = as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
+        let values_array = common::cast::as_primitive_array::<T>(&states[0])?;
+        let counts_array = common::cast::as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
 
         for i in 0..values_array.len() {
             let value = values_array.value(i);
@@ -110,7 +102,7 @@ where
         Ok(())
     }
 
-    fn evaluate(&mut self) -> Result<ScalarValue> {
+    fn evaluate(&mut self) -> error::Result<scalar::ScalarValue> {
         let mut max_value: Option<T::Native> = None;
         let mut max_count: i64 = 0;
 
@@ -132,8 +124,8 @@ where
         });
 
         match max_value {
-            Some(val) => ScalarValue::new_primitive::<T>(Some(val), &self.data_type),
-            None => ScalarValue::new_primitive::<T>(None, &self.data_type),
+            Some(val) => scalar::ScalarValue::new_primitive::<T>(Some(val), &self.data_type),
+            None => scalar::ScalarValue::new_primitive::<T>(None, &self.data_type),
         }
     }
 
@@ -145,35 +137,35 @@ where
 #[derive(Debug)]
 pub struct FloatModeAccumulator<T>
 where
-    T: ArrowPrimitiveType,
+    T: arrow::array::ArrowPrimitiveType,
 {
-    value_counts: HashMap<Hashable<T::Native>, i64>,
-    data_type: DataType,
+    value_counts: collections::HashMap<Hashable<T::Native>, i64>,
+    data_type: arrow::datatypes::DataType,
 }
 
 impl<T> FloatModeAccumulator<T>
 where
-    T: ArrowPrimitiveType,
+    T: arrow::array::ArrowPrimitiveType,
 {
-    pub fn new(data_type: &DataType) -> Self {
+    pub fn new(data_type: &arrow::datatypes::DataType) -> Self {
         Self {
-            value_counts: HashMap::default(),
+            value_counts: collections::HashMap::default(),
             data_type: data_type.clone(),
         }
     }
 }
 
-impl<T> Accumulator for FloatModeAccumulator<T>
+impl<T> logical_expr::Accumulator for FloatModeAccumulator<T>
 where
-    T: ArrowPrimitiveType + Send + Debug,
-    T::Native: PartialOrd + Debug + Clone,
+    T: arrow::array::ArrowPrimitiveType + Send + fmt::Debug,
+    T::Native: PartialOrd + fmt::Debug + Clone,
 {
-    fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
+    fn update_batch(&mut self, values: &[arrow::array::ArrayRef]) -> error::Result<()> {
         if values.is_empty() {
             return Ok(());
         }
 
-        let arr = as_primitive_array::<T>(&values[0])?;
+        let arr = common::cast::as_primitive_array::<T>(&values[0])?;
 
         for value in arr.iter().flatten() {
             let counter = self.value_counts.entry(Hashable(value)).or_insert(0);
@@ -183,35 +175,36 @@ where
         Ok(())
     }
 
-    fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        let values: Vec<ScalarValue> = self
+    fn state(&mut self) -> error::Result<Vec<scalar::ScalarValue>> {
+        let values: Vec<scalar::ScalarValue> = self
             .value_counts
             .keys()
-            .map(|key| ScalarValue::new_primitive::<T>(Some(key.0), &self.data_type))
-            .collect::<Result<Vec<_>>>()?;
+            .map(|key| scalar::ScalarValue::new_primitive::<T>(Some(key.0), &self.data_type))
+            .collect::<error::Result<Vec<_>>>()?;
 
-        let frequencies: Vec<ScalarValue> = self
+        let frequencies: Vec<scalar::ScalarValue> = self
             .value_counts
             .values()
-            .map(|count| ScalarValue::from(*count))
+            .map(|count| scalar::ScalarValue::from(*count))
             .collect();
 
-        let values_scalar = ScalarValue::new_list_nullable(&values, &self.data_type.clone());
-        let frequencies_scalar = ScalarValue::new_list_nullable(&frequencies, &DataType::Int64);
+        let values_scalar = scalar::ScalarValue::new_list_nullable(&values, &self.data_type.clone());
+        let frequencies_scalar =
+            scalar::ScalarValue::new_list_nullable(&frequencies, &arrow::datatypes::DataType::Int64);
 
         Ok(vec![
-            ScalarValue::List(values_scalar),
-            ScalarValue::List(frequencies_scalar),
+            scalar::ScalarValue::List(values_scalar),
+            scalar::ScalarValue::List(frequencies_scalar),
         ])
     }
 
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
+    fn merge_batch(&mut self, states: &[arrow::array::ArrayRef]) -> error::Result<()> {
         if states.is_empty() {
             return Ok(());
         }
 
-        let values_array = as_primitive_array::<T>(&states[0])?;
-        let counts_array = as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
+        let values_array = common::cast::as_primitive_array::<T>(&states[0])?;
+        let counts_array = common::cast::as_primitive_array::<arrow::datatypes::Int64Type>(&states[1])?;
 
         for i in 0..values_array.len() {
             let count = counts_array.value(i);
@@ -222,7 +215,7 @@ where
         Ok(())
     }
 
-    fn evaluate(&mut self) -> Result<ScalarValue> {
+    fn evaluate(&mut self) -> error::Result<scalar::ScalarValue> {
         let mut max_value: Option<T::Native> = None;
         let mut max_count: i64 = 0;
 
@@ -244,8 +237,8 @@ where
         });
 
         match max_value {
-            Some(val) => ScalarValue::new_primitive::<T>(Some(val), &self.data_type),
-            None => ScalarValue::new_primitive::<T>(None, &self.data_type),
+            Some(val) => scalar::ScalarValue::new_primitive::<T>(Some(val), &self.data_type),
+            None => scalar::ScalarValue::new_primitive::<T>(None, &self.data_type),
         }
     }
 
@@ -257,29 +250,32 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use arrow::array::{ArrayRef, Date64Array, Float64Array, Int64Array, Time64MicrosecondArray};
-    use arrow::datatypes::{DataType, Date64Type, Float64Type, Int64Type, Time64MicrosecondType, TimeUnit};
 
-    use std::sync::Arc;
+    use super::*;
+
+    use datafusion::logical_expr::Accumulator;
+    use std::sync;
 
     #[test]
-    fn test_mode_accumulator_single_mode_int64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Int64Type>::new(&DataType::Int64);
-        let values: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 2, 3, 3, 3]));
+    fn test_mode_accumulator_single_mode_int64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Int64Type>::new(&arrow::datatypes::DataType::Int64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Int64Array::from(vec![1, 2, 2, 3, 3, 3]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Int64Type>(Some(3), &DataType::Int64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Int64Type>(
+                Some(3),
+                &arrow::datatypes::DataType::Int64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_with_nulls_int64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Int64Type>::new(&DataType::Int64);
-        let values: ArrayRef = Arc::new(Int64Array::from(vec![
+    fn test_mode_accumulator_with_nulls_int64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Int64Type>::new(&arrow::datatypes::DataType::Int64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Int64Array::from(vec![
             None,
             Some(1),
             Some(2),
@@ -292,51 +288,68 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Int64Type>(Some(3), &DataType::Int64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Int64Type>(
+                Some(3),
+                &arrow::datatypes::DataType::Int64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_tie_case_int64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Int64Type>::new(&DataType::Int64);
-        let values: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 2, 3, 3]));
+    fn test_mode_accumulator_tie_case_int64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Int64Type>::new(&arrow::datatypes::DataType::Int64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Int64Array::from(vec![1, 2, 2, 3, 3]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Int64Type>(Some(3), &DataType::Int64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Int64Type>(
+                Some(3),
+                &arrow::datatypes::DataType::Int64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_only_nulls_int64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Int64Type>::new(&DataType::Int64);
-        let values: ArrayRef = Arc::new(Int64Array::from(vec![None, None, None, None]));
-        acc.update_batch(&[values])?;
-        let result = acc.evaluate()?;
-        assert_eq!(result, ScalarValue::new_primitive::<Int64Type>(None, &DataType::Int64)?);
-        Ok(())
-    }
-
-    #[test]
-    fn test_mode_accumulator_single_mode_float64() -> Result<()> {
-        let mut acc = FloatModeAccumulator::<Float64Type>::new(&DataType::Float64);
-        let values: ArrayRef = Arc::new(Float64Array::from(vec![1.0, 2.0, 2.0, 3.0, 3.0, 3.0]));
+    fn test_mode_accumulator_only_nulls_int64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Int64Type>::new(&arrow::datatypes::DataType::Int64);
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Int64Array::from(vec![None, None, None, None]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Float64Type>(Some(3.0), &DataType::Float64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Int64Type>(
+                None,
+                &arrow::datatypes::DataType::Int64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_with_nulls_float64() -> Result<()> {
-        let mut acc = FloatModeAccumulator::<Float64Type>::new(&DataType::Float64);
-        let values: ArrayRef = Arc::new(Float64Array::from(vec![
+    fn test_mode_accumulator_single_mode_float64() -> error::Result<()> {
+        let mut acc = FloatModeAccumulator::<arrow::datatypes::Float64Type>::new(&arrow::datatypes::DataType::Float64);
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Float64Array::from(vec![1.0, 2.0, 2.0, 3.0, 3.0, 3.0]));
+        acc.update_batch(&[values])?;
+        let result = acc.evaluate()?;
+        assert_eq!(
+            result,
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Float64Type>(
+                Some(3.0),
+                &arrow::datatypes::DataType::Float64
+            )?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_mode_accumulator_with_nulls_float64() -> error::Result<()> {
+        let mut acc = FloatModeAccumulator::<arrow::datatypes::Float64Type>::new(&arrow::datatypes::DataType::Float64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Float64Array::from(vec![
             None,
             Some(1.0),
             Some(2.0),
@@ -349,41 +362,53 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Float64Type>(Some(3.0), &DataType::Float64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Float64Type>(
+                Some(3.0),
+                &arrow::datatypes::DataType::Float64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_tie_case_float64() -> Result<()> {
-        let mut acc = FloatModeAccumulator::<Float64Type>::new(&DataType::Float64);
-        let values: ArrayRef = Arc::new(Float64Array::from(vec![1.0, 2.0, 2.0, 3.0, 3.0]));
+    fn test_mode_accumulator_tie_case_float64() -> error::Result<()> {
+        let mut acc = FloatModeAccumulator::<arrow::datatypes::Float64Type>::new(&arrow::datatypes::DataType::Float64);
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Float64Array::from(vec![1.0, 2.0, 2.0, 3.0, 3.0]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Float64Type>(Some(3.0), &DataType::Float64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Float64Type>(
+                Some(3.0),
+                &arrow::datatypes::DataType::Float64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_only_nulls_float64() -> Result<()> {
-        let mut acc = FloatModeAccumulator::<Float64Type>::new(&DataType::Float64);
-        let values: ArrayRef = Arc::new(Float64Array::from(vec![None, None, None, None]));
+    fn test_mode_accumulator_only_nulls_float64() -> error::Result<()> {
+        let mut acc = FloatModeAccumulator::<arrow::datatypes::Float64Type>::new(&arrow::datatypes::DataType::Float64);
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Float64Array::from(vec![None, None, None, None]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Float64Type>(None, &DataType::Float64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Float64Type>(
+                None,
+                &arrow::datatypes::DataType::Float64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_single_mode_date64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Date64Type>::new(&DataType::Date64);
-        let values: ArrayRef = Arc::new(Date64Array::from(vec![
+    fn test_mode_accumulator_single_mode_date64() -> error::Result<()> {
+        let mut acc =
+            PrimitiveModeAccumulator::<arrow::datatypes::Date64Type>::new(&arrow::datatypes::DataType::Date64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Date64Array::from(vec![
             1609459200000,
             1609545600000,
             1609545600000,
@@ -395,15 +420,19 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Date64Type>(Some(1609632000000), &DataType::Date64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Date64Type>(
+                Some(1609632000000),
+                &arrow::datatypes::DataType::Date64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_with_nulls_date64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Date64Type>::new(&DataType::Date64);
-        let values: ArrayRef = Arc::new(Date64Array::from(vec![
+    fn test_mode_accumulator_with_nulls_date64() -> error::Result<()> {
+        let mut acc =
+            PrimitiveModeAccumulator::<arrow::datatypes::Date64Type>::new(&arrow::datatypes::DataType::Date64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Date64Array::from(vec![
             None,
             Some(1609459200000),
             Some(1609545600000),
@@ -416,15 +445,19 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Date64Type>(Some(1609632000000), &DataType::Date64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Date64Type>(
+                Some(1609632000000),
+                &arrow::datatypes::DataType::Date64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_tie_case_date64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Date64Type>::new(&DataType::Date64);
-        let values: ArrayRef = Arc::new(Date64Array::from(vec![
+    fn test_mode_accumulator_tie_case_date64() -> error::Result<()> {
+        let mut acc =
+            PrimitiveModeAccumulator::<arrow::datatypes::Date64Type>::new(&arrow::datatypes::DataType::Date64);
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Date64Array::from(vec![
             1609459200000,
             1609545600000,
             1609545600000,
@@ -435,28 +468,38 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Date64Type>(Some(1609632000000), &DataType::Date64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Date64Type>(
+                Some(1609632000000),
+                &arrow::datatypes::DataType::Date64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_only_nulls_date64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Date64Type>::new(&DataType::Date64);
-        let values: ArrayRef = Arc::new(Date64Array::from(vec![None, None, None, None]));
+    fn test_mode_accumulator_only_nulls_date64() -> error::Result<()> {
+        let mut acc =
+            PrimitiveModeAccumulator::<arrow::datatypes::Date64Type>::new(&arrow::datatypes::DataType::Date64);
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Date64Array::from(vec![None, None, None, None]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Date64Type>(None, &DataType::Date64)?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Date64Type>(
+                None,
+                &arrow::datatypes::DataType::Date64
+            )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_single_mode_time64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Time64MicrosecondType>::new(&DataType::Time64(TimeUnit::Microsecond));
-        let values: ArrayRef = Arc::new(Time64MicrosecondArray::from(vec![
+    fn test_mode_accumulator_single_mode_time64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Time64MicrosecondType>::new(
+            &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond),
+        );
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Time64MicrosecondArray::from(vec![
             3600000000,
             7200000000,
             7200000000,
@@ -468,18 +511,20 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Time64MicrosecondType>(
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Time64MicrosecondType>(
                 Some(10800000000),
-                &DataType::Time64(TimeUnit::Microsecond)
+                &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond)
             )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_with_nulls_time64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Time64MicrosecondType>::new(&DataType::Time64(TimeUnit::Microsecond));
-        let values: ArrayRef = Arc::new(Time64MicrosecondArray::from(vec![
+    fn test_mode_accumulator_with_nulls_time64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Time64MicrosecondType>::new(
+            &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond),
+        );
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Time64MicrosecondArray::from(vec![
             None,
             Some(3600000000),
             Some(7200000000),
@@ -492,18 +537,20 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Time64MicrosecondType>(
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Time64MicrosecondType>(
                 Some(10800000000),
-                &DataType::Time64(TimeUnit::Microsecond)
+                &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond)
             )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_tie_case_time64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Time64MicrosecondType>::new(&DataType::Time64(TimeUnit::Microsecond));
-        let values: ArrayRef = Arc::new(Time64MicrosecondArray::from(vec![
+    fn test_mode_accumulator_tie_case_time64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Time64MicrosecondType>::new(
+            &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond),
+        );
+        let values: arrow::array::ArrayRef = sync::Arc::new(arrow::array::Time64MicrosecondArray::from(vec![
             3600000000,
             7200000000,
             7200000000,
@@ -514,23 +561,29 @@ mod tests {
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Time64MicrosecondType>(
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Time64MicrosecondType>(
                 Some(10800000000),
-                &DataType::Time64(TimeUnit::Microsecond)
+                &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond)
             )?
         );
         Ok(())
     }
 
     #[test]
-    fn test_mode_accumulator_only_nulls_time64() -> Result<()> {
-        let mut acc = PrimitiveModeAccumulator::<Time64MicrosecondType>::new(&DataType::Time64(TimeUnit::Microsecond));
-        let values: ArrayRef = Arc::new(Time64MicrosecondArray::from(vec![None, None, None, None]));
+    fn test_mode_accumulator_only_nulls_time64() -> error::Result<()> {
+        let mut acc = PrimitiveModeAccumulator::<arrow::datatypes::Time64MicrosecondType>::new(
+            &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond),
+        );
+        let values: arrow::array::ArrayRef =
+            sync::Arc::new(arrow::array::Time64MicrosecondArray::from(vec![None, None, None, None]));
         acc.update_batch(&[values])?;
         let result = acc.evaluate()?;
         assert_eq!(
             result,
-            ScalarValue::new_primitive::<Time64MicrosecondType>(None, &DataType::Time64(TimeUnit::Microsecond))?
+            scalar::ScalarValue::new_primitive::<arrow::datatypes::Time64MicrosecondType>(
+                None,
+                &arrow::datatypes::DataType::Time64(arrow::datatypes::TimeUnit::Microsecond)
+            )?
         );
         Ok(())
     }
