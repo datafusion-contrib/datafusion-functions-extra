@@ -80,7 +80,7 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
     fn simplify(&self) -> Option<logical_expr::function::AggregateFunctionSimplification> {
         let simplify = |mut aggr_func: logical_expr::expr::AggregateFunction,
                         _: &dyn logical_expr::simplify::SimplifyInfo| {
-            let mut order_by = aggr_func.params.order_by.unwrap_or_default();
+            let mut order_by = aggr_func.params.order_by;
             let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
             let sort = logical_expr::expr::Sort::new(second_arg, true, false);
             order_by.push(sort);
@@ -89,7 +89,7 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
                 vec![first_arg],
                 aggr_func.params.distinct,
                 aggr_func.params.filter,
-                Some(order_by),
+                order_by,
                 aggr_func.params.null_treatment,
             ));
             Ok(func)
@@ -165,7 +165,7 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
     fn simplify(&self) -> Option<logical_expr::function::AggregateFunctionSimplification> {
         let simplify = |mut aggr_func: logical_expr::expr::AggregateFunction,
                         _: &dyn logical_expr::simplify::SimplifyInfo| {
-            let mut order_by = aggr_func.params.order_by.unwrap_or_default();
+            let mut order_by = aggr_func.params.order_by;
             let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
 
             let sort = logical_expr::expr::Sort::new(second_arg, false, false);
@@ -175,7 +175,7 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
                 vec![first_arg],
                 aggr_func.params.distinct,
                 aggr_func.params.filter,
-                Some(order_by),
+                order_by,
                 aggr_func.params.null_treatment,
             ));
             Ok(func)
