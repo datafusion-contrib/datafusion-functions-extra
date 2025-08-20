@@ -22,7 +22,11 @@ edition = "2024"
 description = "Extra Functions for DataFusion"
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["aggregations", "datafusion", "functions-extra"]
+keywords = [
+    "aggregations",
+    "datafusion",
+    "functions-extra",
+]
 repository = "https://github.com/datafusion-contrib/datafusion-functions-extra/"
 
 [dependencies]
@@ -40,11 +44,15 @@ tokio = "1.47"
 
 [dev-dependencies.arrow]
 default-features = false
-features = ["test_utils"]
-version = "56.0"
+features = [
+    "test_utils",
+]
+version = "55.0"
 
 [dev-dependencies.insta]
-features = ["yaml"]
+features = [
+    "yaml",
+]
 version = "1.43"
 
 [[bench]]
