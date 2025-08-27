@@ -17,7 +17,7 @@
 
 use datafusion::physical_expr::aggregate::utils::Hashable;
 use datafusion::{arrow, common, error, logical_expr, scalar};
-use std::{collections, fmt, hash};
+use std::{cmp, collections, fmt, hash, mem};
 
 #[derive(fmt::Debug)]
 pub struct PrimitiveModeAccumulator<T>
@@ -108,11 +108,11 @@ where
 
         self.value_counts.iter().for_each(|(value, &count)| {
             match count.cmp(&max_count) {
-                std::cmp::Ordering::Greater => {
+                cmp::Ordering::Greater => {
                     max_value = Some(*value);
                     max_count = count;
                 }
-                std::cmp::Ordering::Equal => {
+                cmp::Ordering::Equal => {
                     max_value = match max_value {
                         Some(ref current_max_value) if value > current_max_value => Some(*value),
                         Some(ref current_max_value) => Some(*current_max_value),
@@ -130,7 +130,7 @@ where
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(&self.value_counts) + self.value_counts.len() * std::mem::size_of::<(T::Native, i64)>()
+        mem::size_of_val(&self.value_counts) + self.value_counts.len() * mem::size_of::<(T::Native, i64)>()
     }
 }
 
@@ -221,11 +221,11 @@ where
 
         self.value_counts.iter().for_each(|(value, &count)| {
             match count.cmp(&max_count) {
-                std::cmp::Ordering::Greater => {
+                cmp::Ordering::Greater => {
                     max_value = Some(value.0);
                     max_count = count;
                 }
-                std::cmp::Ordering::Equal => {
+                cmp::Ordering::Equal => {
                     max_value = match max_value {
                         Some(current_max_value) if value.0 > current_max_value => Some(value.0),
                         Some(current_max_value) => Some(current_max_value),
@@ -243,8 +243,7 @@ where
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(&self.value_counts)
-            + self.value_counts.len() * std::mem::size_of::<(Hashable<T::Native>, i64)>()
+        mem::size_of_val(&self.value_counts) + self.value_counts.len() * mem::size_of::<(Hashable<T::Native>, i64)>()
     }
 }
 

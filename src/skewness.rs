@@ -18,7 +18,7 @@
 use datafusion::arrow::array::AsArray;
 use datafusion::{arrow, logical_expr, scalar};
 use std::ops::{Div, Mul, Sub};
-use std::{any, fmt};
+use std::{any, fmt, mem};
 
 make_udaf_expr_and_func!(SkewnessFunc, skewness, x, "Computes the skewness value.", skewness_udaf);
 
@@ -28,7 +28,7 @@ pub struct SkewnessFunc {
 }
 
 impl fmt::Debug for SkewnessFunc {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SkewnessFunc")
             .field("signature", &self.signature)
             .finish()
@@ -143,7 +143,7 @@ impl logical_expr::Accumulator for SkewnessAccumulator {
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(self)
+        mem::size_of_val(self)
     }
 
     fn state(&mut self) -> datafusion::common::Result<Vec<scalar::ScalarValue>> {

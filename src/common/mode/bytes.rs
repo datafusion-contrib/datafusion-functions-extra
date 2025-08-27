@@ -17,7 +17,7 @@
 
 use datafusion::arrow::array::AsArray;
 use datafusion::{arrow, common, error, logical_expr, scalar};
-use std::collections;
+use std::{collections, mem};
 
 #[derive(Debug)]
 pub struct BytesModeAccumulator {
@@ -142,7 +142,7 @@ impl logical_expr::Accumulator for BytesModeAccumulator {
     }
 
     fn size(&self) -> usize {
-        self.value_counts.capacity() * std::mem::size_of::<(String, i64)>() + std::mem::size_of_val(&self.data_type)
+        self.value_counts.capacity() * mem::size_of::<(String, i64)>() + mem::size_of_val(&self.data_type)
     }
 }
 

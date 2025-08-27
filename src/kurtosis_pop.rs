@@ -20,7 +20,7 @@
 
 use datafusion::arrow::array::{Float64Array, UInt64Array};
 use datafusion::{arrow, common, error, logical_expr, scalar};
-use std::{any, fmt};
+use std::{any, fmt, mem};
 
 make_udaf_expr_and_func!(
     KurtosisPopFunction,
@@ -177,7 +177,7 @@ impl logical_expr::Accumulator for KurtosisPopAccumulator {
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(self)
+        mem::size_of_val(self)
     }
 
     fn state(&mut self) -> error::Result<Vec<scalar::ScalarValue>> {
