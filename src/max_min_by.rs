@@ -63,7 +63,10 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
         &self.signature
     }
 
-    fn return_type(&self, arg_types: &[arrow::datatypes::DataType]) -> error::Result<arrow::datatypes::DataType> {
+    fn return_type(
+        &self,
+        arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<arrow::datatypes::DataType> {
         Ok(arg_types[0].to_owned())
     }
 
@@ -73,7 +76,10 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
     ) -> error::Result<Box<dyn logical_expr::Accumulator>> {
         common::exec_err!("should not reach here")
     }
-    fn coerce_types(&self, arg_types: &[arrow::datatypes::DataType]) -> error::Result<Vec<arrow::datatypes::DataType>> {
+    fn coerce_types(
+        &self,
+        arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<Vec<arrow::datatypes::DataType>> {
         get_min_max_by_result_type(arg_types)
     }
 
@@ -81,17 +87,22 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
         let simplify = |mut aggr_func: logical_expr::expr::AggregateFunction,
                         _: &dyn logical_expr::simplify::SimplifyInfo| {
             let mut order_by = aggr_func.params.order_by;
-            let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
+            let (second_arg, first_arg) = (
+                aggr_func.params.args.remove(1),
+                aggr_func.params.args.remove(0),
+            );
             let sort = logical_expr::expr::Sort::new(second_arg, true, false);
             order_by.push(sort);
-            let func = logical_expr::expr::Expr::AggregateFunction(logical_expr::expr::AggregateFunction::new_udf(
-                functions_aggregate::first_last::last_value_udaf(),
-                vec![first_arg],
-                aggr_func.params.distinct,
-                aggr_func.params.filter,
-                order_by,
-                aggr_func.params.null_treatment,
-            ));
+            let func = logical_expr::expr::Expr::AggregateFunction(
+                logical_expr::expr::AggregateFunction::new_udf(
+                    functions_aggregate::first_last::last_value_udaf(),
+                    vec![first_arg],
+                    aggr_func.params.distinct,
+                    aggr_func.params.filter,
+                    order_by,
+                    aggr_func.params.null_treatment,
+                ),
+            );
             Ok(func)
         };
         Some(Box::new(simplify))
@@ -147,7 +158,10 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
         &self.signature
     }
 
-    fn return_type(&self, arg_types: &[arrow::datatypes::DataType]) -> error::Result<arrow::datatypes::DataType> {
+    fn return_type(
+        &self,
+        arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<arrow::datatypes::DataType> {
         Ok(arg_types[0].to_owned())
     }
 
@@ -158,7 +172,10 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
         common::exec_err!("should not reach here")
     }
 
-    fn coerce_types(&self, arg_types: &[arrow::datatypes::DataType]) -> error::Result<Vec<arrow::datatypes::DataType>> {
+    fn coerce_types(
+        &self,
+        arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<Vec<arrow::datatypes::DataType>> {
         get_min_max_by_result_type(arg_types)
     }
 
@@ -166,18 +183,23 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
         let simplify = |mut aggr_func: logical_expr::expr::AggregateFunction,
                         _: &dyn logical_expr::simplify::SimplifyInfo| {
             let mut order_by = aggr_func.params.order_by;
-            let (second_arg, first_arg) = (aggr_func.params.args.remove(1), aggr_func.params.args.remove(0));
+            let (second_arg, first_arg) = (
+                aggr_func.params.args.remove(1),
+                aggr_func.params.args.remove(0),
+            );
 
             let sort = logical_expr::expr::Sort::new(second_arg, false, false);
             order_by.push(sort); // false for ascending sort
-            let func = logical_expr::expr::Expr::AggregateFunction(logical_expr::expr::AggregateFunction::new_udf(
-                functions_aggregate::first_last::last_value_udaf(),
-                vec![first_arg],
-                aggr_func.params.distinct,
-                aggr_func.params.filter,
-                order_by,
-                aggr_func.params.null_treatment,
-            ));
+            let func = logical_expr::expr::Expr::AggregateFunction(
+                logical_expr::expr::AggregateFunction::new_udf(
+                    functions_aggregate::first_last::last_value_udaf(),
+                    vec![first_arg],
+                    aggr_func.params.distinct,
+                    aggr_func.params.filter,
+                    order_by,
+                    aggr_func.params.null_treatment,
+                ),
+            );
             Ok(func)
         };
         Some(Box::new(simplify))

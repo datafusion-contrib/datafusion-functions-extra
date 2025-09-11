@@ -22,9 +22,11 @@ use datafusion_functions_extra::common::mode::{BytesModeAccumulator, PrimitiveMo
 use std::{hint, slice, sync};
 
 fn prepare_primitive_mode_accumulator() -> Box<dyn Accumulator> {
-    Box::new(PrimitiveModeAccumulator::<arrow::datatypes::Int32Type>::new(
-        &arrow::datatypes::DataType::Int32,
-    ))
+    Box::new(
+        PrimitiveModeAccumulator::<arrow::datatypes::Int32Type>::new(
+            &arrow::datatypes::DataType::Int32,
+        ),
+    )
 }
 
 fn prepare_bytes_mode_accumulator() -> Box<dyn Accumulator> {
@@ -72,7 +74,8 @@ fn mode_benchmark(c: &mut Criterion) {
 
     for &size in &sizes {
         for &null_percentage in &null_percentages {
-            let values = sync::Arc::new(create_string_array::<i32>(size, null_percentage)) as arrow::array::ArrayRef;
+            let values = sync::Arc::new(create_string_array::<i32>(size, null_percentage))
+                as arrow::array::ArrayRef;
             let name = format!(
                 "BytesModeAccumulator: {} elements, {}% nulls",
                 size,

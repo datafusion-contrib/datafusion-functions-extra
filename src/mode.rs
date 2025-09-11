@@ -20,7 +20,13 @@ use std::{any, fmt};
 
 use crate::common;
 
-make_udaf_expr_and_func!(ModeFunction, mode, x, "Calculates the most frequent value.", mode_udaf);
+make_udaf_expr_and_func!(
+    ModeFunction,
+    mode,
+    x,
+    "Calculates the most frequent value.",
+    mode_udaf
+);
 
 /// The `ModeFunction` calculates the mode (most frequent value) from a set of values.
 ///
@@ -65,7 +71,10 @@ impl logical_expr::AggregateUDFImpl for ModeFunction {
         &self.signature
     }
 
-    fn return_type(&self, arg_types: &[arrow::datatypes::DataType]) -> error::Result<arrow::datatypes::DataType> {
+    fn return_type(
+        &self,
+        arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<arrow::datatypes::DataType> {
         Ok(arg_types[0].clone())
     }
 
@@ -77,7 +86,8 @@ impl logical_expr::AggregateUDFImpl for ModeFunction {
 
         Ok(vec![
             arrow::datatypes::Field::new("values", value_type, true).into(),
-            arrow::datatypes::Field::new("frequencies", arrow::datatypes::DataType::UInt64, true).into(),
+            arrow::datatypes::Field::new("frequencies", arrow::datatypes::DataType::UInt64, true)
+                .into(),
         ])
     }
 
@@ -88,36 +98,54 @@ impl logical_expr::AggregateUDFImpl for ModeFunction {
         let data_type = &acc_args.exprs[0].data_type(acc_args.schema)?;
 
         let accumulator: Box<dyn logical_expr::Accumulator> = match data_type {
-            arrow::datatypes::DataType::Int8 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Int8Type>::new(data_type))
-            }
+            arrow::datatypes::DataType::Int8 => Box::new(common::mode::PrimitiveModeAccumulator::<
+                arrow::datatypes::Int8Type,
+            >::new(data_type)),
             arrow::datatypes::DataType::Int16 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Int16Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::Int16Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::Int32 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Int32Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::Int32Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::Int64 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Int64Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::Int64Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::UInt8 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::UInt8Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::UInt8Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::UInt16 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::UInt16Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::UInt16Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::UInt32 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::UInt32Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::UInt32Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::UInt64 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::UInt64Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::UInt64Type,
+                >::new(data_type))
             }
 
             arrow::datatypes::DataType::Date32 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Date32Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::Date32Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::Date64 => {
-                Box::new(common::mode::PrimitiveModeAccumulator::<arrow::datatypes::Date64Type>::new(data_type))
+                Box::new(common::mode::PrimitiveModeAccumulator::<
+                    arrow::datatypes::Date64Type,
+                >::new(data_type))
             }
             arrow::datatypes::DataType::Time32(arrow::datatypes::TimeUnit::Millisecond) => {
                 Box::new(common::mode::PrimitiveModeAccumulator::<
@@ -160,21 +188,26 @@ impl logical_expr::AggregateUDFImpl for ModeFunction {
                 >::new(data_type))
             }
 
-            arrow::datatypes::DataType::Float16 => {
-                Box::new(common::mode::FloatModeAccumulator::<arrow::datatypes::Float16Type>::new(data_type))
-            }
-            arrow::datatypes::DataType::Float32 => {
-                Box::new(common::mode::FloatModeAccumulator::<arrow::datatypes::Float32Type>::new(data_type))
-            }
-            arrow::datatypes::DataType::Float64 => {
-                Box::new(common::mode::FloatModeAccumulator::<arrow::datatypes::Float64Type>::new(data_type))
-            }
+            arrow::datatypes::DataType::Float16 => Box::new(common::mode::FloatModeAccumulator::<
+                arrow::datatypes::Float16Type,
+            >::new(data_type)),
+            arrow::datatypes::DataType::Float32 => Box::new(common::mode::FloatModeAccumulator::<
+                arrow::datatypes::Float32Type,
+            >::new(data_type)),
+            arrow::datatypes::DataType::Float64 => Box::new(common::mode::FloatModeAccumulator::<
+                arrow::datatypes::Float64Type,
+            >::new(data_type)),
 
             arrow::datatypes::DataType::Utf8
             | arrow::datatypes::DataType::Utf8View
-            | arrow::datatypes::DataType::LargeUtf8 => Box::new(common::mode::BytesModeAccumulator::new(data_type)),
+            | arrow::datatypes::DataType::LargeUtf8 => {
+                Box::new(common::mode::BytesModeAccumulator::new(data_type))
+            }
             _ => {
-                return df_common::not_impl_err!("Unsupported data type: {:?} for mode function", data_type);
+                return df_common::not_impl_err!(
+                    "Unsupported data type: {:?} for mode function",
+                    data_type
+                );
             }
         };
 

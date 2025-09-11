@@ -51,7 +51,9 @@ pub fn all_extra_aggregate_functions() -> Vec<sync::Arc<logical_expr::AggregateU
 }
 
 /// Registers all enabled packages with a [`FunctionRegistry`]
-pub fn register_all_extra_functions(registry: &mut dyn execution::FunctionRegistry) -> df_common::Result<()> {
+pub fn register_all_extra_functions(
+    registry: &mut dyn execution::FunctionRegistry,
+) -> df_common::Result<()> {
     let functions: Vec<sync::Arc<logical_expr::AggregateUDF>> = all_extra_aggregate_functions();
 
     functions.into_iter().try_for_each(|udf| {

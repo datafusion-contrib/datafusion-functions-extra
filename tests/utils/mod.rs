@@ -60,7 +60,9 @@ impl TestExecution {
 }
 
 fn format_results(results: &[arrow::record_batch::RecordBatch]) -> Vec<String> {
-    let formatted = arrow::util::pretty::pretty_format_batches(results).unwrap().to_string();
+    let formatted = arrow::util::pretty::pretty_format_batches(results)
+        .unwrap()
+        .to_string();
 
     formatted.lines().map(|s| s.to_string()).collect()
 }
