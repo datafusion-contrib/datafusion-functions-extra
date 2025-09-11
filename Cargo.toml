@@ -18,34 +18,47 @@
 [package]
 name = "datafusion-functions-extra"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 description = "Extra Functions for DataFusion"
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["datafusion", "functions-extra", "aggregations"]
+keywords = [
+    "aggregations",
+    "datafusion",
+    "functions-extra",
+]
 repository = "https://github.com/datafusion-contrib/datafusion-functions-extra/"
-rust-version = "1.76"
-
-[lib]
-name = "datafusion_functions_extra"
-path = "src/lib.rs"
 
 [dependencies]
-arrow = { version = "53.0.0", features = ["test_utils"] }
-datafusion = "42"
-log = "^0.4"
-paste = "1"
+log = "0.4"
+paste = "1.0"
+
+[dependencies.datafusion]
+default-features = false
+version = "49.0"
 
 [dev-dependencies]
-arrow = { version = "53.0.0", features = ["test_utils"] }
-criterion = { version = "0.5", features = ["async_tokio"] }
-insta = { version = "1.40.0", features = ["yaml"] }
-tokio = { version = "1.36", features = ["full"] }
+criterion = "0.7"
+rand = "0.9"
+tokio = "1.47"
 
-[lints.clippy]
-dbg_macro = "deny"
-print_stdout = "deny"
+[dev-dependencies.arrow]
+default-features = false
+features = [
+    "test_utils",
+]
+version = "55.0"
+
+[dev-dependencies.insta]
+features = [
+    "yaml",
+]
+version = "1.43"
 
 [[bench]]
 name = "mode"
 harness = false
+
+[lints.clippy]
+dbg_macro = "deny"
+print_stdout = "deny"

@@ -15,25 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::array::{ArrayRef, AsArray};
-use arrow::datatypes::{Float64Type, UInt64Type};
-use datafusion::arrow::datatypes::{DataType, Field};
-use datafusion::common::ScalarValue;
-use datafusion::logical_expr::{function::AccumulatorArgs, function::StateFieldsArgs};
-use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
-use std::any::Any;
-use std::fmt::Debug;
+use datafusion::arrow::array::AsArray;
+use datafusion::{arrow, logical_expr, scalar};
 use std::ops::{Div, Mul, Sub};
+use std::{any, fmt, mem};
 
-make_udaf_expr_and_func!(SkewnessFunc, skewness, x, "Computes the skewness value.", skewness_udaf);
+make_udaf_expr_and_func!(
+    SkewnessFunc,
+    skewness,
+    x,
+    "Computes the skewness value.",
+    skewness_udaf
+);
 
 pub struct SkewnessFunc {
     name: String,
-    signature: Signature,
+    signature: logical_expr::Signature,
 }
 
-impl Debug for SkewnessFunc {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for SkewnessFunc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SkewnessFunc")
             .field("signature", &self.signature)
             .finish()
@@ -50,37 +51,51 @@ impl SkewnessFunc {
     pub fn new() -> Self {
         Self {
             name: "skewness".to_string(),
-            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
+            signature: logical_expr::Signature::exact(
+                vec![arrow::datatypes::DataType::Float64],
+                logical_expr::Volatility::Immutable,
+            ),
         }
     }
 }
 
-impl AggregateUDFImpl for SkewnessFunc {
-    fn as_any(&self) -> &dyn Any {
+impl logical_expr::AggregateUDFImpl for SkewnessFunc {
+    fn as_any(&self) -> &dyn any::Any {
         self
     }
     fn name(&self) -> &str {
         &self.name
     }
 
-    fn signature(&self) -> &Signature {
+    fn signature(&self) -> &logical_expr::Signature {
         &self.signature
     }
 
-    fn return_type(&self, _arg_types: &[DataType]) -> datafusion::common::Result<DataType> {
-        Ok(DataType::Float64)
+    fn return_type(
+        &self,
+        _arg_types: &[arrow::datatypes::DataType],
+    ) -> datafusion::common::Result<arrow::datatypes::DataType> {
+        Ok(arrow::datatypes::DataType::Float64)
     }
 
-    fn accumulator(&self, _acc_args: AccumulatorArgs) -> datafusion::common::Result<Box<dyn Accumulator>> {
+    fn accumulator(
+        &self,
+        _acc_args: logical_expr::function::AccumulatorArgs,
+    ) -> datafusion::common::Result<Box<dyn logical_expr::Accumulator>> {
         Ok(Box::new(SkewnessAccumulator::new()))
     }
 
-    fn state_fields(&self, _args: StateFieldsArgs) -> datafusion::common::Result<Vec<Field>> {
+    fn state_fields(
+        &self,
+        _args: logical_expr::function::StateFieldsArgs,
+    ) -> datafusion::common::Result<Vec<arrow::datatypes::FieldRef>> {
         Ok(vec![
-            Field::new("count", DataType::UInt64, true),
-            Field::new("sum", DataType::Float64, true),
-            Field::new("sum_sqr", DataType::Float64, true),
-            Field::new("sum_cub", DataType::Float64, true),
+            arrow::datatypes::Field::new("count", arrow::datatypes::DataType::UInt64, true).into(),
+            arrow::datatypes::Field::new("sum", arrow::datatypes::DataType::Float64, true).into(),
+            arrow::datatypes::Field::new("sum_sqr", arrow::datatypes::DataType::Float64, true)
+                .into(),
+            arrow::datatypes::Field::new("sum_cub", arrow::datatypes::DataType::Float64, true)
+                .into(),
         ])
     }
 }
@@ -107,9 +122,12 @@ impl SkewnessAccumulator {
     }
 }
 
-impl Accumulator for SkewnessAccumulator {
-    fn update_batch(&mut self, values: &[ArrayRef]) -> datafusion::common::Result<()> {
-        let array = values[0].as_primitive::<Float64Type>();
+impl logical_expr::Accumulator for SkewnessAccumulator {
+    fn update_batch(
+        &mut self,
+        values: &[arrow::array::ArrayRef],
+    ) -> datafusion::common::Result<()> {
+        let array = values[0].as_primitive::<arrow::datatypes::Float64Type>();
         for val in array.iter().flatten() {
             self.count += 1;
             self.sum += val;
@@ -118,41 +136,46 @@ impl Accumulator for SkewnessAccumulator {
         }
         Ok(())
     }
-    fn evaluate(&mut self) -> datafusion::common::Result<ScalarValue> {
+    fn evaluate(&mut self) -> datafusion::common::Result<scalar::ScalarValue> {
         if self.count <= 2 {
-            return Ok(ScalarValue::Float64(None));
+            return Ok(scalar::ScalarValue::Float64(None));
         }
         let count = self.count as f64;
         let t1 = 1f64 / count;
-        let p = (t1 * (self.sum_sqr - self.sum * self.sum * t1)).powi(3).max(0f64);
+        let p = (t1 * (self.sum_sqr - self.sum * self.sum * t1))
+            .powi(3)
+            .max(0f64);
         let div = p.sqrt();
         if div == 0f64 {
-            return Ok(ScalarValue::Float64(None));
+            return Ok(scalar::ScalarValue::Float64(None));
         }
         let t2 = count.mul(count.sub(1f64)).sqrt().div(count.sub(2f64));
-        let res =
-            t2 * t1 * (self.sum_cub - 3f64 * self.sum_sqr * self.sum * t1 + 2f64 * self.sum.powi(3) * t1 * t1) / div;
-        Ok(ScalarValue::Float64(Some(res)))
+        let res = t2
+            * t1
+            * (self.sum_cub - 3f64 * self.sum_sqr * self.sum * t1
+                + 2f64 * self.sum.powi(3) * t1 * t1)
+            / div;
+        Ok(scalar::ScalarValue::Float64(Some(res)))
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(self)
+        mem::size_of_val(self)
     }
 
-    fn state(&mut self) -> datafusion::common::Result<Vec<ScalarValue>> {
+    fn state(&mut self) -> datafusion::common::Result<Vec<scalar::ScalarValue>> {
         Ok(vec![
-            ScalarValue::from(self.count),
-            ScalarValue::from(self.sum),
-            ScalarValue::from(self.sum_sqr),
-            ScalarValue::from(self.sum_cub),
+            scalar::ScalarValue::from(self.count),
+            scalar::ScalarValue::from(self.sum),
+            scalar::ScalarValue::from(self.sum_sqr),
+            scalar::ScalarValue::from(self.sum_cub),
         ])
     }
 
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> datafusion::common::Result<()> {
-        let counts = states[0].as_primitive::<UInt64Type>();
-        let sums = states[1].as_primitive::<Float64Type>();
-        let sum_sqrs = states[2].as_primitive::<Float64Type>();
-        let sum_cubs = states[3].as_primitive::<Float64Type>();
+    fn merge_batch(&mut self, states: &[arrow::array::ArrayRef]) -> datafusion::common::Result<()> {
+        let counts = states[0].as_primitive::<arrow::datatypes::UInt64Type>();
+        let sums = states[1].as_primitive::<arrow::datatypes::Float64Type>();
+        let sum_sqrs = states[2].as_primitive::<arrow::datatypes::Float64Type>();
+        let sum_cubs = states[3].as_primitive::<arrow::datatypes::Float64Type>();
 
         for i in 0..counts.len() {
             let c = counts.value(i);

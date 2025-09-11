@@ -18,14 +18,9 @@
 // Copired from `datafusion/functions-aggregate/src/kurtosis_pop.rs`
 // Originally authored by goldmedal
 
-use arrow::array::{Array, ArrayRef, Float64Array, UInt64Array};
-use datafusion::arrow::datatypes::{DataType, Field};
-use datafusion::common::cast::as_float64_array;
-use datafusion::common::{downcast_value, DataFusionError, Result, ScalarValue};
-use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
-use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, Signature, Volatility};
-use std::any::Any;
-use std::fmt::Debug;
+use datafusion::arrow::array::{Float64Array, UInt64Array};
+use datafusion::{arrow, common, error, logical_expr, scalar};
+use std::{any, fmt, mem};
 
 make_udaf_expr_and_func!(
     KurtosisPopFunction,
@@ -36,11 +31,11 @@ make_udaf_expr_and_func!(
 );
 
 pub struct KurtosisPopFunction {
-    signature: Signature,
+    signature: logical_expr::Signature,
 }
 
-impl Debug for KurtosisPopFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for KurtosisPopFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("KurtosisPopFunction")
             .field("signature", &self.signature)
             .finish()
@@ -56,13 +51,16 @@ impl Default for KurtosisPopFunction {
 impl KurtosisPopFunction {
     pub fn new() -> Self {
         Self {
-            signature: Signature::coercible(vec![DataType::Float64], Volatility::Immutable),
+            signature: logical_expr::Signature::exact(
+                vec![arrow::datatypes::DataType::Float64],
+                logical_expr::Volatility::Immutable,
+            ),
         }
     }
 }
 
-impl AggregateUDFImpl for KurtosisPopFunction {
-    fn as_any(&self) -> &dyn Any {
+impl logical_expr::AggregateUDFImpl for KurtosisPopFunction {
+    fn as_any(&self) -> &dyn any::Any {
         self
     }
 
@@ -70,25 +68,37 @@ impl AggregateUDFImpl for KurtosisPopFunction {
         "kurtosis_pop"
     }
 
-    fn signature(&self) -> &Signature {
+    fn signature(&self) -> &logical_expr::Signature {
         &self.signature
     }
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Float64)
+    fn return_type(
+        &self,
+        _arg_types: &[arrow::datatypes::DataType],
+    ) -> error::Result<arrow::datatypes::DataType> {
+        Ok(arrow::datatypes::DataType::Float64)
     }
 
-    fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<Field>> {
+    fn state_fields(
+        &self,
+        _args: logical_expr::function::StateFieldsArgs,
+    ) -> error::Result<Vec<arrow::datatypes::FieldRef>> {
         Ok(vec![
-            Field::new("count", DataType::UInt64, true),
-            Field::new("sum", DataType::Float64, true),
-            Field::new("sum_sqr", DataType::Float64, true),
-            Field::new("sum_cub", DataType::Float64, true),
-            Field::new("sum_four", DataType::Float64, true),
+            arrow::datatypes::Field::new("count", arrow::datatypes::DataType::UInt64, true).into(),
+            arrow::datatypes::Field::new("sum", arrow::datatypes::DataType::Float64, true).into(),
+            arrow::datatypes::Field::new("sum_sqr", arrow::datatypes::DataType::Float64, true)
+                .into(),
+            arrow::datatypes::Field::new("sum_cub", arrow::datatypes::DataType::Float64, true)
+                .into(),
+            arrow::datatypes::Field::new("sum_four", arrow::datatypes::DataType::Float64, true)
+                .into(),
         ])
     }
 
-    fn accumulator(&self, _acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
+    fn accumulator(
+        &self,
+        _acc_args: logical_expr::function::AccumulatorArgs,
+    ) -> error::Result<Box<dyn logical_expr::Accumulator>> {
         Ok(Box::new(KurtosisPopAccumulator::new()))
     }
 }
@@ -117,9 +127,9 @@ impl KurtosisPopAccumulator {
     }
 }
 
-impl Accumulator for KurtosisPopAccumulator {
-    fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let array = as_float64_array(&values[0])?;
+impl logical_expr::Accumulator for KurtosisPopAccumulator {
+    fn update_batch(&mut self, values: &[arrow::array::ArrayRef]) -> error::Result<()> {
+        let array = common::cast::as_float64_array(&values[0])?;
         for value in array.iter().flatten() {
             self.count += 1;
             self.sum += value;
@@ -130,12 +140,12 @@ impl Accumulator for KurtosisPopAccumulator {
         Ok(())
     }
 
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
-        let counts = downcast_value!(states[0], UInt64Array);
-        let sums = downcast_value!(states[1], Float64Array);
-        let sum_sqrs = downcast_value!(states[2], Float64Array);
-        let sum_cubs = downcast_value!(states[3], Float64Array);
-        let sum_fours = downcast_value!(states[4], Float64Array);
+    fn merge_batch(&mut self, states: &[arrow::array::ArrayRef]) -> error::Result<()> {
+        let counts = common::downcast_value!(states[0], UInt64Array);
+        let sums = common::downcast_value!(states[1], Float64Array);
+        let sum_sqrs = common::downcast_value!(states[2], Float64Array);
+        let sum_cubs = common::downcast_value!(states[3], Float64Array);
+        let sum_fours = common::downcast_value!(states[4], Float64Array);
 
         for i in 0..counts.len() {
             let c = counts.value(i);
@@ -152,9 +162,9 @@ impl Accumulator for KurtosisPopAccumulator {
         Ok(())
     }
 
-    fn evaluate(&mut self) -> Result<ScalarValue> {
+    fn evaluate(&mut self) -> error::Result<scalar::ScalarValue> {
         if self.count < 1 {
-            return Ok(ScalarValue::Float64(None));
+            return Ok(scalar::ScalarValue::Float64(None));
         }
 
         let count_64 = 1_f64 / self.count as f64;
@@ -165,24 +175,24 @@ impl Accumulator for KurtosisPopAccumulator {
 
         let m2 = (self.sum_sqr - self.sum.powi(2) * count_64) * count_64;
         if m2 <= 0.0 {
-            return Ok(ScalarValue::Float64(None));
+            return Ok(scalar::ScalarValue::Float64(None));
         }
 
         let target = m4 / (m2.powi(2)) - 3.0;
-        Ok(ScalarValue::Float64(Some(target)))
+        Ok(scalar::ScalarValue::Float64(Some(target)))
     }
 
     fn size(&self) -> usize {
-        std::mem::size_of_val(self)
+        mem::size_of_val(self)
     }
 
-    fn state(&mut self) -> Result<Vec<ScalarValue>> {
+    fn state(&mut self) -> error::Result<Vec<scalar::ScalarValue>> {
         Ok(vec![
-            ScalarValue::from(self.count),
-            ScalarValue::from(self.sum),
-            ScalarValue::from(self.sum_sqr),
-            ScalarValue::from(self.sum_cub),
-            ScalarValue::from(self.sum_four),
+            scalar::ScalarValue::from(self.count),
+            scalar::ScalarValue::from(self.sum),
+            scalar::ScalarValue::from(self.sum_sqr),
+            scalar::ScalarValue::from(self.sum_cub),
+            scalar::ScalarValue::from(self.sum_four),
         ])
     }
 }

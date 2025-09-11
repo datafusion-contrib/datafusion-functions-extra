@@ -15,30 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow::record_batch::RecordBatch;
-use arrow::util::pretty::pretty_format_batches;
-use datafusion::error::Result;
-use datafusion::execution::context::SessionContext;
-use datafusion::prelude::SessionConfig;
-use datafusion::sql::parser::DFParser;
+use datafusion::{arrow, error, execution, sql};
 use datafusion_functions_extra::register_all_extra_functions;
 use log::debug;
 
 pub struct TestExecution {
-    ctx: SessionContext,
+    ctx: execution::context::SessionContext,
 }
 
 impl TestExecution {
-    pub async fn new() -> Result<Self> {
-        let config = SessionConfig::new();
-        let mut ctx = SessionContext::new_with_config(config);
+    pub async fn new() -> error::Result<Self> {
+        let config = execution::config::SessionConfig::new();
+        let mut ctx = execution::context::SessionContext::new_with_config(config);
         register_all_extra_functions(&mut ctx)?;
         Ok(Self { ctx })
     }
 
     pub async fn with_setup(self, sql: &str) -> Self {
         debug!("Running setup query: {sql}");
-        let statements = DFParser::parse_sql(sql).expect("Error parsing setup query");
+        let statements = sql::parser::DFParser::parse_sql(sql).expect("Error parsing setup query");
         for statement in statements {
             debug!("Running setup statement: {statement}");
             let statement_sql = statement.to_string();
@@ -53,7 +48,7 @@ impl TestExecution {
         self
     }
 
-    pub async fn run(&mut self, sql: &str) -> Result<Vec<RecordBatch>> {
+    pub async fn run(&mut self, sql: &str) -> error::Result<Vec<arrow::record_batch::RecordBatch>> {
         debug!("Running query: {sql}");
         self.ctx.sql(sql).await?.collect().await
     }
@@ -64,8 +59,10 @@ impl TestExecution {
     }
 }
 
-fn format_results(results: &[RecordBatch]) -> Vec<String> {
-    let formatted = pretty_format_batches(results).unwrap().to_string();
+fn format_results(results: &[arrow::record_batch::RecordBatch]) -> Vec<String> {
+    let formatted = arrow::util::pretty::pretty_format_batches(results)
+        .unwrap()
+        .to_string();
 
     formatted.lines().map(|s| s.to_string()).collect()
 }
