@@ -32,6 +32,7 @@ make_udaf_expr_and_func!(
 ///
 /// - Null values are ignored during the calculation.
 /// - If multiple values have the same frequency, the MAX value with the highest frequency is returned.
+#[derive(Eq, Hash, PartialEq)]
 pub struct ModeFunction {
     signature: logical_expr::Signature,
 }

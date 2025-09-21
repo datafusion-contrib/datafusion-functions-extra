@@ -27,6 +27,7 @@ make_udaf_expr_and_func!(
     kurtosis_udaf
 );
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct KurtosisFunction {
     signature: logical_expr::Signature,
 }

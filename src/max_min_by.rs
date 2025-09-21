@@ -11,6 +11,7 @@ make_udaf_expr_and_func!(
     max_by_udaf
 );
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct MaxByFunction {
     signature: logical_expr::Signature,
 }
@@ -43,7 +44,7 @@ fn get_min_max_by_result_type(
 ) -> error::Result<Vec<arrow::datatypes::DataType>> {
     match &input_types[0] {
         arrow::datatypes::DataType::Dictionary(_, dict_value_type) => {
-            // TODO add checker, if the value type is complex data type
+            // x add checker, if the value type is complex data type
             Ok(vec![dict_value_type.deref().clone()])
         }
         _ => Ok(input_types.to_vec()),
@@ -117,6 +118,7 @@ make_udaf_expr_and_func!(
     min_by_udaf
 );
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct MinByFunction {
     signature: logical_expr::Signature,
 }

@@ -28,6 +28,7 @@ make_udaf_expr_and_func!(
     skewness_udaf
 );
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct SkewnessFunc {
     name: String,
     signature: logical_expr::Signature,

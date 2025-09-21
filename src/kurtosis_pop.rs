@@ -30,6 +30,7 @@ make_udaf_expr_and_func!(
     kurtosis_pop_udaf
 );
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct KurtosisPopFunction {
     signature: logical_expr::Signature,
 }
