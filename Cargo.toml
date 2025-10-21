@@ -35,12 +35,12 @@ paste = "1.0"
 
 [dependencies.datafusion]
 default-features = false
-version = "50.1"
+version = "50.2"
 
 [dev-dependencies]
 criterion = "0.7"
 rand = "0.9"
-tokio = "1.47"
+tokio = "1.48"
 
 [dev-dependencies.arrow]
 default-features = false
