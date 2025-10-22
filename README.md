@@ -1,8 +1,8 @@
-# datafusion-functions-extra
+# datafusion-extra-functions
 
-[![CI](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-functions-extra/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI](https://github.com/datafusion-contrib/datafusion-extra-functions/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/datafusion-contrib/datafusion-extra-functions/actions/workflows/ci.yml?query=branch%3Amain)
 
-[![Crates.io](https://img.shields.io/crates/v/datafusion-functions-extra?color=green)](https://crates.io/crates/datafusion-functions-extra)
+[![Crates.io](https://img.shields.io/crates/v/datafusion-extra-functions?color=green)](https://crates.io/crates/datafusion-extra-functions)
 
 **Note:** This is not an official Apache Software Foundation release.
 
@@ -11,7 +11,7 @@ This crate provides extra functions for DataFusion, specifically focusing on adv
 To use these functions, you'll just need to call:
 
 ```rust
-datafusion_functions_extra::register_all_extra_functions(&mut ctx)?;
+datafusion_extra_functions::register_all_extra_functions(&mut ctx)?;
 ```
 
 # Examples

@@ -16,8 +16,8 @@
 # under the License.
 
 [package]
-name = "datafusion-functions-extra"
-version = "0.3.0"
+name = "datafusion-extra-functions"
+version = "0.4.0"
 edition = "2024"
 description = "Extra Functions for DataFusion"
 readme = "README.md"
@@ -27,7 +27,7 @@ keywords = [
     "datafusion",
     "functions-extra",
 ]
-repository = "https://github.com/datafusion-contrib/datafusion-functions-extra/"
+repository = "https://github.com/datafusion-contrib/datafusion-extra-functions/"
 
 [dependencies]
 log = "0.4"
