@@ -95,7 +95,7 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
                 aggr_func.params.args.remove(1),
                 aggr_func.params.args.remove(0),
             );
-            let sort = logical_expr::expr::Sort::new(second_arg, true, false);
+            let sort = logical_expr::expr::Sort::new(second_arg, true, true);
             order_by.push(sort);
             let func = logical_expr::expr::Expr::AggregateFunction(
                 logical_expr::expr::AggregateFunction::new_udf(
@@ -193,7 +193,7 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
                 aggr_func.params.args.remove(0),
             );
 
-            let sort = logical_expr::expr::Sort::new(second_arg, false, false);
+            let sort = logical_expr::expr::Sort::new(second_arg, false, true);
             order_by.push(sort); // false for ascending sort
             let func = logical_expr::expr::Expr::AggregateFunction(
                 logical_expr::expr::AggregateFunction::new_udf(
@@ -326,7 +326,18 @@ mod tests {
     #[cfg(test)]
     mod max_by {
         use super::*;
+        async fn extract_string(df: prelude::DataFrame) -> error::Result<String> {
+            let results = df.collect().await?;
+            let col = results[0].column(0);
+            let arr = col.as_any().downcast_ref::<arrow::array::StringArray>().unwrap();
+            Ok(arr.value(0).to_string())
+        }
 
+        fn ctx_max() -> error::Result<prelude::SessionContext> {
+            let ctx = prelude::SessionContext::new();
+            ctx.register_udaf(MaxByFunction::new().into());
+            Ok(ctx)
+        }
         #[tokio::test]
         async fn test_max_by_string_int() -> error::Result<()> {
             let query = format!(
@@ -336,6 +347,41 @@ mod tests {
             let df = ctx()?.sql(&query).await?;
             let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
             assert_eq!(result, MAX_STRING_VALUE);
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_max_by_ignores_nulls_in_ok() -> error::Result<()> {
+            let ctx = ctx_max()?;
+            let sql = r#"
+                SELECT max_by(v, k)
+                FROM (
+                    VALUES
+                        ('a', 1),
+                        ('b', CAST(NULL AS INT)),
+                        ('c', 2)
+                ) AS t(v, k)
+            "#;
+            let df = ctx.sql(sql).await?;
+            let got = extract_string(df).await?;
+            assert_eq!(got, "c", "max_by should ignore NULLs");
+            Ok(())
+        }
+        #[tokio::test]
+        async fn test_max_by_ignores_nulls_in_ko() -> error::Result<()> {
+            let ctx = ctx_max()?;
+            let sql = r#"
+                SELECT max_by(v, k)
+                FROM (
+                    VALUES
+                        ('a', 1),
+                        ('b', CAST(NULL AS INT)),
+                        ('c', 2)
+                ) AS t(v, k)
+            "#;
+            let df = ctx.sql(sql).await?;
+            let got = extract_string(df).await?;
+            assert_eq!(got, "b", "max_by should ignore NULLs");
             Ok(())
         }
 
