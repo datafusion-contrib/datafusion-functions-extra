@@ -47,7 +47,7 @@ default-features = false
 features = [
     "test_utils",
 ]
-version = "56.0"
+version = "57.0"
 
 [dev-dependencies.insta]
 features = [
