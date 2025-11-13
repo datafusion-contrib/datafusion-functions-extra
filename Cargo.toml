@@ -35,7 +35,7 @@ paste = "1.0"
 
 [dependencies.datafusion]
 default-features = false
-version = "50.2"
+version = "50.3"
 
 [dev-dependencies]
 criterion = "0.7"
@@ -47,7 +47,7 @@ default-features = false
 features = [
     "test_utils",
 ]
-version = "57.0"
+version = "56.0"
 
 [dev-dependencies.insta]
 features = [
