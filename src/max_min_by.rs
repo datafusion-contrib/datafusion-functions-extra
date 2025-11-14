@@ -95,7 +95,7 @@ impl logical_expr::AggregateUDFImpl for MaxByFunction {
                 aggr_func.params.args.remove(1),
                 aggr_func.params.args.remove(0),
             );
-            let sort = logical_expr::expr::Sort::new(second_arg, true, false);
+            let sort = logical_expr::expr::Sort::new(second_arg, true, true);
             order_by.push(sort);
             let func = logical_expr::expr::Expr::AggregateFunction(
                 logical_expr::expr::AggregateFunction::new_udf(
@@ -193,7 +193,7 @@ impl logical_expr::AggregateUDFImpl for MinByFunction {
                 aggr_func.params.args.remove(0),
             );
 
-            let sort = logical_expr::expr::Sort::new(second_arg, false, false);
+            let sort = logical_expr::expr::Sort::new(second_arg, false, true);
             order_by.push(sort); // false for ascending sort
             let func = logical_expr::expr::Expr::AggregateFunction(
                 logical_expr::expr::AggregateFunction::new_udf(
@@ -325,6 +325,7 @@ mod tests {
 
     #[cfg(test)]
     mod max_by {
+
         use super::*;
 
         #[tokio::test]
@@ -384,6 +385,41 @@ mod tests {
             let df = ctx()?.sql(&query).await?;
             let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
             assert_eq!(result, MAX_DICTIONARY_VALUE);
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_max_by_ignores_nulls() -> error::Result<()> {
+            let query = r#"
+                SELECT max_by(v, k)
+                FROM (
+                    VALUES
+                        ('a', 1),
+                        ('b', CAST(NULL AS INT)),
+                        ('c', 2)
+                ) AS t(v, k)
+            "#;
+            let df = ctx()?.sql(&query).await?;
+            let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
+            assert_eq!(result, "c", "max_by should ignore NULLs");
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_max_like_main_test() -> error::Result<()> {
+            let query = r#"
+                SELECT max_by(v, k)
+                FROM (
+                    VALUES
+                        (1, 10),
+                        (2, 5),
+                        (3, 15),
+                        (4, 8)
+                ) AS t(v, k)
+            "#;
+            let df = ctx()?.sql(&query).await?;
+            let result = extract_single_value::<i64, arrow::array::Int64Array>(df).await?;
+            assert_eq!(result, 3);
             Ok(())
         }
 
@@ -457,6 +493,59 @@ mod tests {
             let df = ctx()?.sql(&query).await?;
             let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
             assert_eq!(result, MIN_DICTIONARY_VALUE);
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_min_by_ignores_nulls() -> error::Result<()> {
+            let query = r#"
+                SELECT min_by(v, k)
+                FROM (
+                    VALUES
+                        ('a', 1),
+                        ('b', CAST(NULL AS INT)),
+                        ('c', 2)
+                ) AS t(v, k)
+            "#;
+            let df = ctx()?.sql(&query).await?;
+            let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
+            assert_eq!(result, "a", "min_by should ignore NULLs");
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_min_like_main_test_str() -> error::Result<()> {
+            let query = r#"
+                SELECT min_by(v, k)
+                FROM (
+                    VALUES
+                        ('a', 10),
+                        ('b', 5),
+                        ('c', 15),
+                        ('d', 8)
+                ) AS t(v, k)
+            "#;
+            let df = ctx()?.sql(&query).await?;
+            let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
+            assert_eq!(result, "b");
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_min_like_main_test_int() -> error::Result<()> {
+            let query = r#"
+                SELECT min_by(v, k)
+                FROM (
+                    VALUES
+                        (1, 10),
+                        (2, 5),
+                        (3, 15),
+                        (4, 8)
+                ) AS t(v, k)
+            "#;
+            let df = ctx()?.sql(&query).await?;
+            let result = extract_single_value::<i64, arrow::array::Int64Array>(df).await?;
+            assert_eq!(result, 2);
             Ok(())
         }
 
