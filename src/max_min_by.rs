@@ -399,7 +399,7 @@ mod tests {
                         ('c', 2)
                 ) AS t(v, k)
             "#;
-            let df =ctx()?.sql(&query).await?;
+            let df = ctx()?.sql(&query).await?;
             let result = extract_single_value::<String, arrow::array::StringArray>(df).await?;
             assert_eq!(result, "c", "max_by should ignore NULLs");
             Ok(())
